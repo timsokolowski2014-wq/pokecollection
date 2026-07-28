@@ -181,6 +181,18 @@ async function mettreAJourPrix() {
         continue;
       }
 
+      const { error: erreurHistorique } = await supabase
+  .from("historique_prix")
+  .insert({
+    carte_id: carte.identifiant,
+    prix: nouveauPrix,
+    date_releve: dateMiseAJour,
+  });
+
+if (erreurHistorique) {
+  console.error(erreurHistorique);
+}
+
       setCartes((anciennesCartes) =>
         anciennesCartes.map((ancienneCarte) =>
           ancienneCarte.identifiant === carte.identifiant
