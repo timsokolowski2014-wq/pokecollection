@@ -154,19 +154,6 @@ export async function GET(request: NextRequest) {
         .eq("id", carte.id);
 
       if (erreurMiseAJour) {
-        console.error(
-          `Erreur pour ${carte.nom} :`,
-          erreurMiseAJour
-        );
-
-        echecs++;
-        details.push(
-          `${carte.nom} : erreur pendant la mise à jour Supabase.`
-        );
-        continue;
-      }
-
-      if (erreurMiseAJour) {
   console.error(
     `Erreur pour ${carte.nom} :`,
     erreurMiseAJour
@@ -200,9 +187,7 @@ if (erreurHistorique) {
   continue;
 }
 
-
-
-      misesAJour++;
+misesAJour++;
     } catch (erreur) {
       console.error(`Erreur pour ${carte.nom} :`, erreur);
 
