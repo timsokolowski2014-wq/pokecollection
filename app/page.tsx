@@ -531,17 +531,17 @@ const statistiquesParType = cartes.reduce<
           </select>
         </div>
 
-                <p className="mt-4 text-center text-gray-400">
-          {cartesFiltrees.length} carte
-          {cartesFiltrees.length > 1 ? "s" : ""} trouvée
-          {cartesFiltrees.length > 1 ? "s" : ""}
-        </p>
+               <p className="mt-4 text-center text-gray-400">
+  {cartesFiltrees.length === 1
+    ? "1 carte trouvée"
+    : `${cartesFiltrees.length} cartes trouvées`}
+</p>
 
-        <p className="mt-2 text-center text-yellow-400">
-          {cartesSelectionnees.length} carte
-          {cartesSelectionnees.length > 1 ? "s" : ""} sélectionnée
-          {cartesSelectionnees.length > 1 ? "s" : ""}
-        </p>
+<p className="mt-2 text-center text-yellow-400">
+  {cartesSelectionnees.length === 1
+    ? "1 carte sélectionnée"
+    : `${cartesSelectionnees.length} cartes sélectionnées`}
+</p>
       </div>
 
       <section className="mt-10">

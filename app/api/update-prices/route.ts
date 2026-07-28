@@ -166,6 +166,42 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
+      if (erreurMiseAJour) {
+  console.error(
+    `Erreur pour ${carte.nom} :`,
+    erreurMiseAJour
+  );
+
+  echecs++;
+  details.push(
+    `${carte.nom} : erreur pendant la mise à jour Supabase.`
+  );
+  continue;
+}
+
+const { error: erreurHistorique } = await supabase
+  .from("historique_prix")
+  .insert({
+    carte_id: carte.id,
+    prix: nouveauPrix,
+    date_releve: dateMiseAJour,
+  });
+
+if (erreurHistorique) {
+  console.error(
+    `Erreur historique pour ${carte.nom} :`,
+    erreurHistorique
+  );
+
+  echecs++;
+  details.push(
+    `${carte.nom} : prix mis à jour, mais historique non enregistré.`
+  );
+  continue;
+}
+
+
+
       misesAJour++;
     } catch (erreur) {
       console.error(`Erreur pour ${carte.nom} :`, erreur);
