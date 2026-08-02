@@ -1,26 +1,161 @@
 @import "tailwindcss";
 
+/* ---------- Base ---------- */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --pokemon-blue: #2563eb;
+  --pokemon-yellow: #facc15;
+  --pokemon-dark: #07111f;
+  --pokemon-panel: rgba(30, 41, 59, 0.88);
+  --pokemon-border: rgba(148, 163, 184, 0.22);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  min-height: 100vh;
+  margin: 0;
+  color: white;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(37, 99, 235, 0.24), transparent 30rem),
+    radial-gradient(circle at 85% 20%, rgba(124, 58, 237, 0.18), transparent 28rem),
+    radial-gradient(circle at 50% 100%, rgba(250, 204, 21, 0.08), transparent 34rem),
+    linear-gradient(145deg, #07111f 0%, #0f172a 48%, #081322 100%);
+  background-attachment: fixed;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+main {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  background: transparent !important;
+}
+
+main::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  opacity: 0.22;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+/* ---------- Sélection et focus ---------- */
+
+::selection {
+  color: #111827;
+  background: var(--pokemon-yellow);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+select {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible {
+  outline: 3px solid rgba(250, 204, 21, 0.42);
+  outline-offset: 2px;
+}
+
+/* ---------- Scrollbar ---------- */
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07111f;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid #07111f;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #2563eb, #7c3aed);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+}
+
+/* ---------- Animations ---------- */
+
+@keyframes apparition {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+section,
+article {
+  animation: apparition 0.35s ease-out both;
+}
+
+article {
+  backdrop-filter: blur(12px);
+}
+
+article:hover {
+  border-color: rgba(96, 165, 250, 0.62) !important;
+}
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 640px) {
+  body {
+    background-attachment: scroll;
+  }
+
+  main {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  h1 {
+    line-height: 1.05;
+  }
+}
+
+/* Respecte les utilisateurs qui désactivent les animations. */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

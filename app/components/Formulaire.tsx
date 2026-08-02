@@ -1,78 +1,72 @@
-import { useState } from "react";
+"use client";
+
+import { ChangeEvent, useState } from "react";
 
 type FormulaireProps = {
   nom: string;
-  setNom: (value: string) => void;
-
+  setNom: (valeur: string) => void;
   edition: string;
-  setEdition: (value: string) => void;
-
-  type: string;
-  setType: (value: string) => void;
-
-  etat: string;
-  setEtat: (value: string) => void;
-
-  prix: string;
-  setPrix: (value: string) => void;
-
-  image: string;
-  setImage: (value: string) => void;
-
+  setEdition: (valeur: string) => void;
   numero: string;
-  setNumero: (value: string) => void;
-
+  setNumero: (valeur: string) => void;
+  type: string;
+  setType: (valeur: string) => void;
+  etat: string;
+  setEtat: (valeur: string) => void;
+  prix: string;
+  setPrix: (valeur: string) => void;
+  image: string;
+  setImage: (valeur: string) => void;
   idApi: string;
-  setIdApi: (value: string) => void;
-
+  setIdApi: (valeur: string) => void;
   onEnregistrer: () => void;
 };
 
 type CarteRecherche = {
   id: string;
-  localId: string;
+  localId?: string;
   name: string;
   image?: string;
 };
 
-type PrixCardmarket = {
-  updated?: string;
-  unit?: string;
-  avg?: number;
-  low?: number;
-  trend?: number;
-  avg1?: number;
-  avg7?: number;
-  avg30?: number;
-  "avg-holo"?: number;
-  "low-holo"?: number;
-  "trend-holo"?: number;
-  "avg1-holo"?: number;
-  "avg7-holo"?: number;
-  "avg30-holo"?: number;
-};
-
-type CarteComplete = {
+type CarteDetaillee = {
   id: string;
-  localId: string;
-  name: string;
+  localId?: string;
+  name?: string;
   image?: string;
-  rarity?: string;
-  category?: string;
   types?: string[];
-
   set?: {
     name?: string;
-    cardCount?: {
-      official?: number;
-      total?: number;
+  };
+  pricing?: {
+    cardmarket?: {
+      trend?: number;
+      avg?: number;
+      avg7?: number;
+      avg30?: number;
+      "trend-holo"?: number;
+      "avg-holo"?: number;
     };
   };
-
-  pricing?: {
-    cardmarket?: PrixCardmarket;
-  };
 };
+
+const traductionTypes: Record<string, string> = {
+  Fire: "Feu",
+  Water: "Eau",
+  Grass: "Plante",
+  Lightning: "Électrique",
+  Psychic: "Psy",
+  Fighting: "Combat",
+  Dragon: "Dragon",
+  Fairy: "Fée",
+  Ice: "Glace",
+  Darkness: "Ténèbres",
+  Metal: "Métal",
+  Colorless: "Incolore",
+};
+
+const classeChamp =
+  "mt-3 w-full rounded-2xl border border-slate-600 bg-slate-700 px-4 py-4 text-base text-white outline-none placeholder:text-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30";
 
 export default function Formulaire({
   nom,
@@ -81,8 +75,6 @@ export default function Formulaire({
   setEdition,
   numero,
   setNumero,
-  idApi,
-  setIdApi,
   type,
   setType,
   etat,
@@ -91,111 +83,69 @@ export default function Formulaire({
   setPrix,
   image,
   setImage,
+  idApi,
+  setIdApi,
   onEnregistrer,
 }: FormulaireProps) {
   const [resultats, setResultats] = useState<CarteRecherche[]>([]);
   const [rechercheEnCours, setRechercheEnCours] = useState(false);
-  const [carteEnCours, setCarteEnCours] = useState("");
-  const [erreurRecherche, setErreurRecherche] = useState("");
+  const [selectionEnCours, setSelectionEnCours] = useState(false);
+  const [rechercheEffectuee, setRechercheEffectuee] = useState(false);
+  const [carteChoisie, setCarteChoisie] = useState(false);
+  const [imageManquante, setImageManquante] = useState(false);
+  const [nomFichier, setNomFichier] = useState("");
 
-  function convertirType(typeApi?: string) {
-    const types: Record<string, string> = {
-      Fire: "Feu",
-      Water: "Eau",
-      Grass: "Plante",
-      Lightning: "Électrique",
-      Psychic: "Psy",
-      Fighting: "Combat",
-      Dragon: "Dragon",
-      Fairy: "Fée",
-      Metal: "Métal",
-      Darkness: "Ténèbres",
-      Colorless: "Incolore",
-    };
+  async function rechercherCartes() {
+    const nomRecherche = nom.trim();
 
-    if (!typeApi) {
-      return "";
-    }
-
-    return types[typeApi] ?? typeApi;
-  }
-
-  function obtenirNumeroRecherche() {
-    return numero.trim().split("/")[0].trim().toLowerCase();
-  }
-
-  function obtenirPrixCardmarket(carte: CarteComplete) {
-    const cardmarket = carte.pricing?.cardmarket;
-
-    if (!cardmarket) {
-      return undefined;
-    }
-
-    return (
-      cardmarket.trend ??
-      cardmarket.avg ??
-      cardmarket.avg7 ??
-      cardmarket.avg30 ??
-      cardmarket["trend-holo"] ??
-      cardmarket["avg-holo"] ??
-      cardmarket["avg7-holo"] ??
-      cardmarket["avg30-holo"]
-    );
-  }
-
-  async function rechercherCarte() {
-    if (!nom.trim()) {
-      setErreurRecherche("Écris d’abord le nom de la carte.");
-      setResultats([]);
+    if (nomRecherche.length < 2) {
+      alert("Écris au moins 2 lettres dans le nom de la carte.");
       return;
     }
 
     setRechercheEnCours(true);
-    setErreurRecherche("");
+    setRechercheEffectuee(true);
+    setCarteChoisie(false);
+    setImageManquante(false);
     setResultats([]);
 
     try {
-      const adresse =
-        "https://api.tcgdex.net/v2/fr/cards?name=" +
-        encodeURIComponent(nom.trim());
+      const parametres = new URLSearchParams();
+      parametres.set("name", nomRecherche);
+      parametres.set("pagination:page", "1");
+      parametres.set("pagination:itemsPerPage", "30");
 
-      const reponse = await fetch(adresse);
+      const reponse = await fetch(
+        `https://api.tcgdex.net/v2/fr/cards?${parametres.toString()}`
+      );
 
       if (!reponse.ok) {
-        throw new Error("La recherche a échoué.");
+        throw new Error("La recherche TCGdex a échoué.");
       }
 
-      const cartesTrouvees: CarteRecherche[] = await reponse.json();
-      const numeroRecherche = obtenirNumeroRecherche();
+      const cartes: CarteRecherche[] = await reponse.json();
 
-      const cartesFiltrees = numeroRecherche
-        ? cartesTrouvees.filter((carte) =>
-            String(carte.localId)
-              .toLowerCase()
-              .includes(numeroRecherche)
-          )
-        : cartesTrouvees;
+      const cartesFiltrees = Array.isArray(cartes)
+        ? cartes.filter((carte) => {
+            if (!numero.trim()) return true;
 
-      setResultats(cartesFiltrees.slice(0, 30));
+            return carte.localId
+              ?.toLowerCase()
+              .includes(numero.trim().toLowerCase());
+          })
+        : [];
 
-      if (cartesFiltrees.length === 0) {
-        setErreurRecherche(
-          "Aucune carte trouvée. Vérifie le nom ou essaie sans le numéro."
-        );
-      }
-    } catch (error) {
-      console.error(error);
-      setErreurRecherche(
-        "Impossible de rechercher les cartes pour le moment."
-      );
+      setResultats(cartesFiltrees);
+    } catch (erreur) {
+      console.error("Erreur pendant la recherche :", erreur);
+      alert("Impossible de rechercher les cartes pour le moment.");
     } finally {
       setRechercheEnCours(false);
     }
   }
 
   async function choisirCarte(carte: CarteRecherche) {
-    setCarteEnCours(carte.id);
-    setErreurRecherche("");
+    setSelectionEnCours(true);
 
     try {
       const reponse = await fetch(
@@ -203,279 +153,336 @@ export default function Formulaire({
       );
 
       if (!reponse.ok) {
-        throw new Error("Impossible de récupérer les détails.");
+        throw new Error("Impossible de charger cette carte.");
       }
 
-      const carteComplete: CarteComplete = await reponse.json();
+      const details: CarteDetaillee = await reponse.json();
+      const prixCardmarket = details.pricing?.cardmarket;
 
-      setNom(carteComplete.name);
-      setEdition(carteComplete.set?.name ?? "");
-      setIdApi(carteComplete.id);
-      setType(convertirType(carteComplete.types?.[0]));
+      const prixTrouve =
+        prixCardmarket?.trend ??
+        prixCardmarket?.avg ??
+        prixCardmarket?.avg7 ??
+        prixCardmarket?.avg30 ??
+        prixCardmarket?.["trend-holo"] ??
+        prixCardmarket?.["avg-holo"];
 
-      const total =
-        carteComplete.set?.cardCount?.official ??
-        carteComplete.set?.cardCount?.total;
+      const typeAnglais = details.types?.[0] ?? "";
+      const typeFrancais =
+        traductionTypes[typeAnglais] || typeAnglais || "Sans type";
 
-      setNumero(
-        total
-          ? `${carteComplete.localId}/${total}`
-          : String(carteComplete.localId)
-      );
+      setNom(details.name ?? carte.name);
+      setNumero(details.localId ?? carte.localId ?? "");
+      setEdition(details.set?.name ?? "");
+      setType(typeFrancais);
+      setIdApi(details.id ?? carte.id);
+      setCarteChoisie(true);
 
-      if (carteComplete.image) {
-        setImage(`${carteComplete.image}/high.webp`);
+      const imageTrouvee = details.image ?? carte.image;
+
+      if (imageTrouvee) {
+        setImage(`${imageTrouvee}/high.webp`);
+        setNomFichier("Image TCGdex");
+        setImageManquante(false);
       } else {
         setImage("");
+        setNomFichier("");
+        setImageManquante(true);
       }
-
-      const prixTrouve = obtenirPrixCardmarket(carteComplete);
 
       if (typeof prixTrouve === "number") {
         setPrix(prixTrouve.toFixed(2));
       }
 
       setResultats([]);
-    } catch (error) {
-      console.error(error);
-      setErreurRecherche(
-        "Impossible de récupérer les informations de cette carte."
-      );
+      setRechercheEffectuee(false);
+    } catch (erreur) {
+      console.error("Erreur pendant le chargement de la carte :", erreur);
+      alert("Impossible de charger cette carte.");
     } finally {
-      setCarteEnCours("");
+      setSelectionEnCours(false);
     }
   }
 
+  function choisirPhoto(evenement: ChangeEvent<HTMLInputElement>) {
+    const fichier = evenement.target.files?.[0];
+
+    if (!fichier) return;
+
+    if (!fichier.type.startsWith("image/")) {
+      alert("Choisis un fichier image.");
+      evenement.target.value = "";
+      return;
+    }
+
+    const tailleMaximale = 3 * 1024 * 1024;
+
+    if (fichier.size > tailleMaximale) {
+      alert("L’image est trop lourde. Choisis une image de moins de 3 Mo.");
+      evenement.target.value = "";
+      return;
+    }
+
+    const lecteur = new FileReader();
+
+    lecteur.onload = () => {
+      if (typeof lecteur.result === "string") {
+        setImage(lecteur.result);
+        setNomFichier(fichier.name);
+        setImageManquante(false);
+      }
+    };
+
+    lecteur.onerror = () => {
+      alert("Impossible de lire cette image.");
+    };
+
+    lecteur.readAsDataURL(fichier);
+  }
+
+  const ajoutImpossible =
+    selectionEnCours ||
+    !nom.trim() ||
+    !edition.trim() ||
+    !etat ||
+    !prix ||
+    !image;
+
   return (
-    <div className="mx-auto max-w-2xl rounded-3xl border border-slate-700 bg-slate-800 p-8 shadow-2xl">
-      <h2 className="mb-2 text-4xl font-bold">
-        ➕ Ajouter une carte
-      </h2>
+    <section className="mx-auto w-full max-w-4xl rounded-3xl border border-slate-700 bg-slate-800 p-6 shadow-2xl sm:p-8">
+      <div className="mb-8">
+        <h2 className="text-4xl font-bold leading-tight text-white">
+          ➕ Ajouter une carte
+        </h2>
 
-      <p className="mb-8 text-gray-400">
-        Remplis les informations ou recherche une carte Pokémon.
-      </p>
+        <p className="mt-3 text-lg leading-relaxed text-gray-400">
+          Remplis les informations ou recherche une carte Pokémon.
+        </p>
+      </div>
 
-      <div className="space-y-6">
-        <div>
-          <label className="mb-2 block font-semibold">
-            📛 Nom de la carte
-          </label>
-
+      <div className="space-y-7">
+        <label className="block text-lg font-bold text-white">
+          🔴 Nom de la carte
           <input
-            className="w-full rounded-xl bg-slate-700 p-4 text-white outline-none focus:ring-2 focus:ring-yellow-400"
-            placeholder="Ex : Pikachu ex"
+            type="text"
             value={nom}
             onChange={(e) => setNom(e.target.value)}
+            placeholder="Ex : Pikachu ex"
+            className={classeChamp}
           />
-        </div>
+        </label>
 
-        <div>
-          <label className="mb-2 block font-semibold">
-            🔢 Numéro de la carte
-          </label>
-
+        <label className="block text-lg font-bold text-white">
+          🔢 Numéro de la carte
           <input
             type="text"
             value={numero}
             onChange={(e) => setNumero(e.target.value)}
             placeholder="Exemple : 238/191"
-            className="w-full rounded-xl bg-slate-700 p-4 text-white outline-none focus:ring-2 focus:ring-yellow-400"
+            className={classeChamp}
           />
 
-          <p className="mt-2 text-sm text-gray-400">
+          <span className="mt-3 block text-sm font-normal leading-relaxed text-gray-400">
             Le numéro est facultatif, mais il aide à trouver la bonne carte.
-          </p>
-        </div>
+          </span>
+        </label>
 
         <button
           type="button"
-          onClick={rechercherCarte}
+          onClick={rechercherCartes}
           disabled={rechercheEnCours}
-          className="w-full rounded-xl bg-blue-600 p-4 text-lg font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-600"
+          className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-xl font-bold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:bg-slate-600"
         >
           {rechercheEnCours
-            ? "🔄 Recherche en cours..."
+            ? "⏳ Recherche en cours..."
             : "🔍 Rechercher la carte"}
         </button>
 
-        {erreurRecherche && (
-          <p className="rounded-xl bg-red-950 p-3 text-red-300">
-            {erreurRecherche}
-          </p>
-        )}
-
-        {resultats.length > 0 && (
+        {rechercheEffectuee && (
           <div className="rounded-2xl border border-slate-600 bg-slate-900 p-4">
-            <h3 className="mb-4 text-xl font-bold">
+            <h3 className="mb-4 text-2xl font-bold text-white">
               Résultats trouvés : {resultats.length}
             </h3>
 
-            <div className="grid max-h-[600px] grid-cols-2 gap-4 overflow-y-auto sm:grid-cols-3">
-              {resultats.map((carte) => (
-                <button
-                  key={carte.id}
-                  type="button"
-                  onClick={() => choisirCarte(carte)}
-                  disabled={carteEnCours === carte.id}
-                  className="rounded-xl border border-slate-600 bg-slate-800 p-3 text-left transition hover:border-yellow-400 hover:bg-slate-700 disabled:opacity-60"
-                >
-                  {carte.image ? (
-  <img
-    src={`${carte.image}/low.webp`}
-    alt={carte.name}
-    className="mx-auto mb-3 h-48 w-full rounded-lg object-contain"
-    onError={(e) => {
-      e.currentTarget.style.display = "none";
-    }}
-  />
-) : (
-  <div className="mb-3 flex h-48 items-center justify-center rounded-lg bg-slate-700 text-center text-gray-400">
-    Image indisponible
-  </div>
-)}
+            {resultats.length === 0 && !rechercheEnCours ? (
+              <p className="text-gray-400">
+                Aucune carte trouvée. Vérifie le nom ou le numéro.
+              </p>
+            ) : (
+              <div className="grid max-h-[34rem] grid-cols-1 gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
+                {resultats.map((carte) => (
+                  <button
+                    key={carte.id}
+                    type="button"
+                    onClick={() => choisirCarte(carte)}
+                    disabled={selectionEnCours}
+                    className="rounded-xl border border-slate-600 bg-slate-800 p-3 text-left transition hover:border-blue-400 hover:bg-slate-700 disabled:cursor-wait"
+                  >
+                    {carte.image ? (
+                      <img
+                        src={`${carte.image}/low.webp`}
+                        alt={carte.name}
+                        className="mx-auto h-44 w-full rounded-lg object-contain"
+                      />
+                    ) : (
+                      <div className="flex h-44 items-center justify-center rounded-lg bg-slate-700 text-center text-sm text-gray-300">
+                        🖼️ Image non disponible
+                      </div>
+                    )}
 
-                  <p className="font-bold">{carte.name}</p>
-
-                  <p className="mt-1 text-sm text-gray-400">
-                    Numéro : {carte.localId}
-                  </p>
-
-                  {carteEnCours === carte.id && (
-                    <p className="mt-2 text-sm text-yellow-400">
-                      Chargement...
+                    <p className="mt-3 font-bold text-white">
+                      {carte.name}
                     </p>
-                  )}
-                </button>
-              ))}
-            </div>
+
+                    <p className="mt-1 text-sm text-gray-400">
+                      Numéro : {carte.localId || "Inconnu"}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        <div>
-          <label className="mb-2 block font-semibold">
-            📚 Édition
-          </label>
-
+        <label className="block text-lg font-bold text-white">
+          📚 Édition
           <input
             type="text"
-            placeholder="Ex : Évolutions, 151..."
             value={edition}
             onChange={(e) => setEdition(e.target.value)}
-            className="w-full rounded-xl bg-slate-700 p-4 text-white outline-none focus:ring-2 focus:ring-yellow-400"
+            placeholder="Ex : Évolutions, 151..."
+            className={classeChamp}
           />
-        </div>
+        </label>
 
-        <div>
-          <label className="mb-2 block font-semibold">
-            🏷️ Type
-          </label>
-
+        <label className="block text-lg font-bold text-white">
+          🏷️ Type
           <select
-            className="w-full rounded-xl bg-slate-700 p-4 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             value={type}
             onChange={(e) => setType(e.target.value)}
+            className={classeChamp}
           >
             <option value="">Choisir un type</option>
-            <option>Feu</option>
-            <option>Eau</option>
-            <option>Plante</option>
-            <option>Électrique</option>
-            <option>Psy</option>
-            <option>Combat</option>
-            <option>Dragon</option>
-            <option>Fée</option>
-            <option>Glace</option>
-            <option>Insecte</option>
-            <option>Métal</option>
-            <option>Poison</option>
-            <option>Roche</option>
-            <option>Spectre</option>
-            <option>Ténèbres</option>
-            <option>Vol</option>
-            <option>Incolore</option>
+            <option value="Feu">🔥 Feu</option>
+            <option value="Eau">💧 Eau</option>
+            <option value="Plante">🌿 Plante</option>
+            <option value="Électrique">⚡ Électrique</option>
+            <option value="Psy">🧠 Psy</option>
+            <option value="Combat">🥊 Combat</option>
+            <option value="Dragon">🐉 Dragon</option>
+            <option value="Glace">❄️ Glace</option>
+            <option value="Ténèbres">🌑 Ténèbres</option>
+            <option value="Métal">⚙️ Métal</option>
+            <option value="Fée">🧚 Fée</option>
+            <option value="Roche">🪨 Roche</option>
+            <option value="Sol">🌍 Sol</option>
+            <option value="Poison">☠️ Poison</option>
+            <option value="Spectre">👻 Spectre</option>
+            <option value="Insecte">🐛 Insecte</option>
+            <option value="Vol">🕊️ Vol</option>
+            <option value="Incolore">⭐ Incolore</option>
           </select>
-        </div>
+        </label>
 
-        <div>
-          <label className="mb-2 block font-semibold">
-            ⭐ État
-          </label>
-
+        <label className="block text-lg font-bold text-white">
+          ⭐ État
           <select
-            className="w-full rounded-xl bg-slate-700 p-4 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             value={etat}
             onChange={(e) => setEtat(e.target.value)}
+            className={classeChamp}
           >
             <option value="">Choisir un état</option>
-            <option>Mint</option>
-            <option>Near Mint</option>
-            <option>Excellent</option>
-            <option>Good</option>
-            <option>Played</option>
-            <option>Poor</option>
+            <option value="Neuf">Neuf</option>
+            <option value="Quasi neuf">Quasi neuf</option>
+            <option value="Très bon">Très bon</option>
+            <option value="Bon">Bon</option>
+            <option value="Correct">Correct</option>
+            <option value="Abîmé">Abîmé</option>
           </select>
-        </div>
+        </label>
 
-        <div>
-          <label className="mb-2 block font-semibold">
-            💰 Prix en euros
-          </label>
-
+        <label className="block text-lg font-bold text-white">
+          💰 Prix en euros
           <input
             type="number"
             min="0"
             step="0.01"
-            placeholder="Ex : 25,50"
             value={prix}
             onChange={(e) => setPrix(e.target.value)}
-            className="w-full rounded-xl bg-slate-700 p-4 text-white outline-none focus:ring-2 focus:ring-yellow-400"
+            placeholder="Ex : 25,50"
+            className={classeChamp}
           />
-        </div>
+        </label>
 
-        <div>
-          <label className="mb-2 block font-semibold">
-            🖼️ Photo de la carte
-          </label>
+        {image ? (
+          <div className="rounded-2xl border border-green-500/40 bg-slate-900 p-5">
+            <p className="mb-4 text-lg font-bold text-green-300">
+              ✅ Image de la carte
+            </p>
 
-          <input
-            type="file"
-            accept="image/*"
-            className="w-full rounded-xl bg-slate-700 p-4 text-white"
-            onChange={(e) => {
-              const fichier = e.target.files?.[0];
-
-              if (!fichier) {
-                return;
-              }
-
-              const lecteur = new FileReader();
-
-              lecteur.onload = () => {
-                setImage(lecteur.result as string);
-              };
-
-              lecteur.readAsDataURL(fichier);
-            }}
-          />
-
-          {image && (
             <img
               src={image}
               alt="Aperçu de la carte"
-              className="mx-auto mt-4 max-h-64 rounded-xl object-contain"
+              className="mx-auto max-h-96 rounded-xl object-contain"
             />
-          )}
-        </div>
+
+            <label className="mt-5 block text-base font-bold text-white">
+              Changer l’image
+              <input
+                type="file"
+                accept="image/*"
+                onChange={choisirPhoto}
+                className="mt-3 block w-full cursor-pointer rounded-2xl border border-slate-600 bg-slate-700 p-3 text-sm text-white"
+              />
+            </label>
+
+            {nomFichier && (
+              <p className="mt-3 text-sm text-gray-400">
+                Image choisie : {nomFichier}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div
+            className={`rounded-2xl border p-6 text-center ${
+              imageManquante || carteChoisie
+                ? "border-orange-400/60 bg-orange-950/30"
+                : "border-slate-600 bg-slate-900"
+            }`}
+          >
+            <p className="text-2xl font-bold text-white">
+              🖼️ Image non disponible
+            </p>
+
+            <p className="mt-2 text-gray-400">
+              Choisis une image de la carte depuis ton ordinateur.
+            </p>
+
+            <label className="mt-5 inline-block cursor-pointer rounded-xl bg-orange-500 px-6 py-4 text-lg font-bold text-white transition hover:bg-orange-600">
+              Choisir une image
+              <input
+                type="file"
+                accept="image/*"
+                onChange={choisirPhoto}
+                className="hidden"
+              />
+            </label>
+          </div>
+        )}
+
+        <input type="hidden" value={idApi} readOnly />
 
         <button
           type="button"
           onClick={onEnregistrer}
-          className="mt-6 w-full rounded-xl bg-yellow-400 p-4 text-lg font-bold text-black transition hover:bg-yellow-500"
+          disabled={ajoutImpossible}
+          className="w-full rounded-2xl bg-yellow-400 px-5 py-4 text-xl font-bold text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-gray-300"
         >
-          💾 Ajouter à la collection
+          {image
+            ? "💾 Ajouter à la collection"
+            : "🖼️ Choisis d’abord une image"}
         </button>
       </div>
-    </div>
+    </section>
   );
 }
