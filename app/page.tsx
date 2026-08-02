@@ -43,12 +43,16 @@ export default function Home() {
 
   const [recherche, setRecherche] = useState("");
   const [filtreType, setFiltreType] = useState("");
-  const [tri, setTri] = useState("nom");
+  const [tri, setTri] = useState("edition-chronologique");
   const [miseAJourPrixEnCours, setMiseAJourPrixEnCours] = useState(false);
   const [cartesSelectionnees, setCartesSelectionnees] = useState<number[]>([]);
   const [favoris, setFavoris] = useState<number[]>([]);
   const [afficherFavoris, setAfficherFavoris] = useState(false);
   const [carteAgrandie, setCarteAgrandie] = useState<Carte | null>(null);
+  const [editionsOuvertes, setEditionsOuvertes] = useState<string[]>([]);
+  const [modeCollection, setModeCollection] = useState<
+    "cartes" | "editions" | "favoris"
+  >("cartes");
 
   const [graphiqueAffiche, setGraphiqueAffiche] = useState<
     "collection" | "edition" | "carte" | null
@@ -428,6 +432,24 @@ window.setTimeout(() => {
     }
   }
 
+  function basculerEdition(nomEdition: string) {
+    setEditionsOuvertes((anciennesEditions) =>
+      anciennesEditions.includes(nomEdition)
+        ? anciennesEditions.filter((edition) => edition !== nomEdition)
+        : [...anciennesEditions, nomEdition]
+    );
+  }
+
+  function ouvrirToutesLesEditions() {
+    setEditionsOuvertes(
+      cartesParEdition.map(([nomEdition]) => nomEdition)
+    );
+  }
+
+  function fermerToutesLesEditions() {
+    setEditionsOuvertes([]);
+  }
+
   function selectionnerCarte(identifiant: number) {
     setCartesSelectionnees((anciennesSelections) =>
       anciennesSelections.includes(identifiant)
@@ -658,6 +680,83 @@ window.setTimeout(() => {
     alert("✅ Carte modifiée.");
   }
 
+  function normaliserNomEdition(nomEdition: string) {
+    return nomEdition
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[–—]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  const ordreChronologiqueEditions: Record<string, number> = {
+    "set de base": 199901,
+    "jungle": 199906,
+    "fossile": 199910,
+    "team rocket": 200004,
+    "neo genesis": 200012,
+    "neo discovery": 200106,
+    "neo revelation": 200110,
+    "neo destiny": 200202,
+    "expedition": 200209,
+    "aquapolis": 200301,
+    "skyridge": 200305,
+    "ex rubis & saphir": 200307,
+    "ex dragon": 200311,
+    "ex deoxys": 200502,
+    "ex createurs de legendes": 200602,
+    "diamant & perle": 200705,
+    "platine": 200902,
+    "heartgold soulsilver": 201002,
+    "noir & blanc": 201104,
+    "xy": 201402,
+    "promo xy": 201402,
+    "promotions xy": 201402,
+    "soleil et lune": 201702,
+    "gardiens ascendants": 201705,
+    "tonnerre perdu": 201811,
+    "duo de choc": 201902,
+    "alliance infaillible": 201905,
+    "epee et bouclier": 202002,
+    "regne de glace": 202106,
+    "stars etincelantes": 202202,
+    "astres radieux": 202205,
+    "astres radieux galerie de dresseurs": 202205,
+    "origine perdue": 202209,
+    "tempete argentee": 202211,
+    "ecarlate et violet": 202303,
+    "evolutions a paldea": 202306,
+    "151": 202309,
+    "faille paradoxe": 202311,
+    "destinees de paldea": 202401,
+    "mascarade crepusculaire": 202405,
+    "fable nebuleuse": 202408,
+    "couronne stellaire": 202409,
+    "etincelles deferlantes": 202411,
+    "evolutions prismatiques": 202501,
+    "rivalites destinees": 202505,
+    "foudre noire": 202507,
+    "flamme blanche": 202507,
+    "promotions svp black star": 202599,
+    "svp black star promos": 202599,
+    "promo svp black star": 202599,
+  };
+
+  function rangChronologiqueEdition(nomEdition: string) {
+    const nomNormalise = normaliserNomEdition(nomEdition);
+
+    if (ordreChronologiqueEditions[nomNormalise] !== undefined) {
+      return ordreChronologiqueEditions[nomNormalise];
+    }
+
+    const correspondance = Object.entries(ordreChronologiqueEditions)
+      .filter(([nomConnu]) => nomNormalise.includes(nomConnu))
+      .sort((a, b) => b[0].length - a[0].length)[0];
+
+    return correspondance?.[1] ?? 999999;
+  }
+
   const cartesFiltrees = cartes
     .filter((carte) => {
       const texteRecherche = recherche.trim().toLowerCase();
@@ -673,18 +772,57 @@ window.setTimeout(() => {
       const correspondType =
         filtreType === "" || carte.type === filtreType;
 
-      const correspondFavori =
-        !afficherFavoris || favoris.includes(carte.identifiant);
-
-      return correspondRecherche && correspondType && correspondFavori;
+      return correspondRecherche && correspondType;
     })
     .sort((a, b) => {
+      if (tri === "edition-chronologique") {
+        const differenceEdition =
+          rangChronologiqueEdition(a.edition) -
+          rangChronologiqueEdition(b.edition);
+
+        if (differenceEdition !== 0) return differenceEdition;
+
+        return a.nom.localeCompare(b.nom, "fr");
+      }
+
       if (tri === "prix-croissant") return a.prix - b.prix;
       if (tri === "prix-decroissant") return b.prix - a.prix;
       if (tri === "edition") return a.edition.localeCompare(b.edition, "fr");
       if (tri === "nom-z-a") return b.nom.localeCompare(a.nom, "fr");
       return a.nom.localeCompare(b.nom, "fr");
     });
+
+  const cartesParEdition = Object.entries(
+    cartesFiltrees.reduce<Record<string, Carte[]>>((groupes, carte) => {
+      const nomEdition = carte.edition || "Sans édition";
+
+      if (!groupes[nomEdition]) {
+        groupes[nomEdition] = [];
+      }
+
+      groupes[nomEdition].push(carte);
+      return groupes;
+    }, {})
+  ).sort(([editionA], [editionB]) => {
+    const difference =
+      rangChronologiqueEdition(editionA) -
+      rangChronologiqueEdition(editionB);
+
+    if (difference !== 0) return difference;
+
+    return editionA.localeCompare(editionB, "fr");
+  });
+
+  useEffect(() => {
+    if (
+      cartesParEdition.length > 0 &&
+      editionsOuvertes.length === 0
+    ) {
+      setEditionsOuvertes([cartesParEdition[0][0]]);
+    }
+    // L'ouverture automatique ne doit se faire qu'après le premier chargement.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartes.length]);
 
 const valeurCollection = cartes.reduce((total, carte) => {
   const prixCarte = Number(carte.prix);
@@ -1914,6 +2052,7 @@ const valeurCollection = cartes.reduce((total, carte) => {
               onChange={(e) => setTri(e.target.value)}
               className="mt-3 w-full rounded-2xl border border-slate-600 bg-slate-800 px-5 py-4 text-white outline-none transition focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/30"
             >
+              <option value="edition-chronologique">Édition : ancienne → récente</option>
               <option value="nom">Nom A → Z</option>
               <option value="nom-z-a">Nom Z → A</option>
               <option value="prix-croissant">Prix croissant</option>
@@ -1967,24 +2106,6 @@ const valeurCollection = cartes.reduce((total, carte) => {
           />
         </label>
 
-        <button
-          type="button"
-          onClick={() => setAfficherFavoris((valeur) => !valeur)}
-          className={`mt-5 flex w-full items-center justify-center gap-3 rounded-2xl border px-5 py-4 font-bold transition ${
-            afficherFavoris
-              ? "border-yellow-300/70 bg-yellow-400/20 text-yellow-200"
-              : "border-slate-600 bg-slate-800 text-slate-300 hover:border-yellow-300/50 hover:text-yellow-200"
-          }`}
-        >
-          <span className="text-2xl">{afficherFavoris ? "★" : "☆"}</span>
-
-          <span>
-            {afficherFavoris
-              ? `Afficher toutes les cartes (${cartes.length})`
-              : `Afficher seulement les favoris (${favoris.length})`}
-          </span>
-        </button>
-
         <div className="mt-5 flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-950/40 px-5 py-4 text-center sm:flex-row sm:text-left">
           <p className="text-lg font-bold text-white">
             {cartesFiltrees.length === 1
@@ -2002,74 +2123,437 @@ const valeurCollection = cartes.reduce((total, carte) => {
         </div>
       </section>
 
-      <div className="mb-7 mt-12 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-300">
-            Ta collection
-          </p>
-
-          <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
+      <section className="mt-10">
+        <div className="mx-auto grid max-w-3xl grid-cols-3 gap-2 rounded-2xl border border-slate-700 bg-slate-900/80 p-2 shadow-xl backdrop-blur-xl">
+          <button
+            type="button"
+            onClick={() => setModeCollection("cartes")}
+            className={`rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
+              modeCollection === "cartes"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-950/40"
+                : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`}
+          >
             📚 Mes cartes
-          </h2>
-        </div>
+          </button>
 
-        <p className="text-slate-400">
-          Clique sur une carte pour l’afficher en grand.
-        </p>
-      </div>
+          <button
+            type="button"
+            onClick={() => setModeCollection("editions")}
+            className={`rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
+              modeCollection === "editions"
+                ? "bg-violet-600 text-white shadow-lg shadow-violet-950/40"
+                : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`}
+          >
+            🗂️ Mes éditions
+          </button>
 
-      {cartesFiltrees.length === 0 ? (
-        <div className="rounded-2xl bg-slate-800 p-8 text-center">
-          <p className="text-xl text-gray-300">
-            Aucune carte ne correspond à ta recherche.
-          </p>
+          <button
+            type="button"
+            onClick={() => setModeCollection("favoris")}
+            className={`rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
+              modeCollection === "favoris"
+                ? "bg-yellow-400 text-slate-950 shadow-lg shadow-yellow-950/30"
+                : "text-slate-300 hover:bg-slate-800 hover:text-yellow-300"
+            }`}
+          >
+            ⭐ Favoris
+          </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {cartesFiltrees.map((carte) => {
-            const historiqueCarte = historiquePrix
-              .filter((ligne) => ligne.carte_id === carte.identifiant)
-              .map((ligne) => ({
-                prix: ligne.prix,
-                date: new Date(ligne.date_releve).toLocaleDateString(
-                  "fr-FR",
-                  {
-                    day: "2-digit",
-                    month: "2-digit",
+      </section>
+
+      {modeCollection === "cartes" && (
+        <>
+          <div className="mb-7 mt-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-300">
+                Toute la collection
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
+                📚 Mes cartes
+              </h2>
+            </div>
+
+            <p className="text-slate-400">
+              {cartesFiltrees.length} carte
+              {cartesFiltrees.length > 1 ? "s" : ""}
+            </p>
+          </div>
+
+          {cartesFiltrees.length === 0 ? (
+            <div className="rounded-2xl bg-slate-800 p-8 text-center">
+              <p className="text-xl text-gray-300">
+                Aucune carte ne correspond à ta recherche.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {cartesFiltrees.map((carte) => {
+                const historiqueCarte = historiquePrix
+                  .filter(
+                    (ligne) => ligne.carte_id === carte.identifiant
+                  )
+                  .map((ligne) => ({
+                    prix: ligne.prix,
+                    date: new Date(
+                      ligne.date_releve
+                    ).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    }),
+                  }));
+
+                return (
+                  <PokemonCard
+                    key={carte.identifiant}
+                    nom={carte.nom}
+                    edition={carte.edition}
+                    type={carte.type}
+                    etat={carte.etat}
+                    prix={carte.prix}
+                    image={carte.image}
+                    historique={historiqueCarte}
+                    selectionnee={cartesSelectionnees.includes(
+                      carte.identifiant
+                    )}
+                    onSelectionner={() =>
+                      selectionnerCarte(carte.identifiant)
+                    }
+                    onVoirGraphique={() =>
+                      ouvrirGraphiqueCarte(carte.identifiant)
+                    }
+                    onModifier={() =>
+                      modifierCarteDirectement(carte.identifiant)
+                    }
+                    onSupprimer={() =>
+                      supprimerUneCarte(carte.identifiant)
+                    }
+                    favori={favoris.includes(carte.identifiant)}
+                    onFavori={() =>
+                      basculerFavori(carte.identifiant)
+                    }
+                    onAgrandir={() =>
+                      setCarteAgrandie(carte)
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {modeCollection === "favoris" && (
+        <>
+          <div className="mb-7 mt-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.22em] text-yellow-300">
+                Tes cartes préférées
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
+                ⭐ Favoris
+              </h2>
+            </div>
+
+            <p className="text-slate-400">
+              {cartesFiltrees.filter((carte) =>
+                favoris.includes(carte.identifiant)
+              ).length}{" "}
+              carte
+              {cartesFiltrees.filter((carte) =>
+                favoris.includes(carte.identifiant)
+              ).length > 1
+                ? "s"
+                : ""}
+            </p>
+          </div>
+
+          {cartesFiltrees.filter((carte) =>
+            favoris.includes(carte.identifiant)
+          ).length === 0 ? (
+            <div className="rounded-3xl border border-yellow-400/20 bg-slate-900/70 p-10 text-center">
+              <p className="text-5xl">☆</p>
+
+              <p className="mt-4 text-xl font-bold text-white">
+                Aucun favori pour le moment
+              </p>
+
+              <p className="mt-2 text-slate-400">
+                Clique sur l’étoile d’une carte pour l’ajouter ici.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {cartesFiltrees
+                .filter((carte) =>
+                  favoris.includes(carte.identifiant)
+                )
+                .map((carte) => {
+                  const historiqueCarte = historiquePrix
+                    .filter(
+                      (ligne) =>
+                        ligne.carte_id === carte.identifiant
+                    )
+                    .map((ligne) => ({
+                      prix: ligne.prix,
+                      date: new Date(
+                        ligne.date_releve
+                      ).toLocaleDateString("fr-FR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                      }),
+                    }));
+
+                  return (
+                    <PokemonCard
+                      key={carte.identifiant}
+                      nom={carte.nom}
+                      edition={carte.edition}
+                      type={carte.type}
+                      etat={carte.etat}
+                      prix={carte.prix}
+                      image={carte.image}
+                      historique={historiqueCarte}
+                      selectionnee={cartesSelectionnees.includes(
+                        carte.identifiant
+                      )}
+                      onSelectionner={() =>
+                        selectionnerCarte(carte.identifiant)
+                      }
+                      onVoirGraphique={() =>
+                        ouvrirGraphiqueCarte(carte.identifiant)
+                      }
+                      onModifier={() =>
+                        modifierCarteDirectement(carte.identifiant)
+                      }
+                      onSupprimer={() =>
+                        supprimerUneCarte(carte.identifiant)
+                      }
+                      favori
+                      onFavori={() =>
+                        basculerFavori(carte.identifiant)
+                      }
+                      onAgrandir={() =>
+                        setCarteAgrandie(carte)
+                      }
+                    />
+                  );
+                })}
+            </div>
+          )}
+        </>
+      )}
+
+      {modeCollection === "editions" && (
+        <>
+          {cartesFiltrees.length === 0 ? (
+            <div className="mt-10 rounded-2xl bg-slate-800 p-8 text-center">
+              <p className="text-xl text-gray-300">
+                Aucune carte ne correspond à ta recherche.
+              </p>
+            </div>
+          ) : (
+            <section className="mt-10 overflow-hidden rounded-3xl border border-slate-700/80 bg-slate-900/60 p-4 shadow-xl backdrop-blur-xl sm:p-6">
+              <div className="mb-6 flex flex-col gap-4 border-b border-slate-700 pb-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold uppercase tracking-[0.22em] text-violet-300">
+                    Classeur chronologique
+                  </p>
+
+                  <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
+                    🗂️ Mes éditions
+                  </h2>
+
+                  <p className="mt-2 text-sm text-slate-400 sm:text-base">
+                    Clique sur une édition pour afficher ou masquer ses cartes.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={ouvrirToutesLesEditions}
+                    className="rounded-xl border border-blue-400/30 bg-blue-500/15 px-4 py-3 text-sm font-bold text-blue-100 transition hover:border-blue-300/70 hover:bg-blue-500/25"
+                  >
+                    ▼ Tout ouvrir
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={fermerToutesLesEditions}
+                    className="rounded-xl border border-slate-500/40 bg-slate-700/50 px-4 py-3 text-sm font-bold text-white transition hover:border-slate-300/70 hover:bg-slate-700"
+                  >
+                    ▲ Tout fermer
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {cartesParEdition.map(
+                  ([nomEdition, cartesEdition], indexEdition) => {
+                    const editionOuverte =
+                      editionsOuvertes.includes(nomEdition);
+
+                    const valeurEdition = cartesEdition.reduce(
+                      (total, carte) =>
+                        total + (Number(carte.prix) || 0),
+                      0
+                    );
+
+                    return (
+                      <article
+                        key={nomEdition}
+                        className={`overflow-hidden rounded-2xl border transition duration-300 ${
+                          editionOuverte
+                            ? "border-violet-400/40 bg-slate-800/90 shadow-xl"
+                            : "border-slate-700 bg-slate-800/55 hover:border-violet-400/30 hover:bg-slate-800/80"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            basculerEdition(nomEdition)
+                          }
+                          className="flex w-full flex-col gap-4 p-4 text-left sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                          aria-expanded={editionOuverte}
+                        >
+                          <div className="flex min-w-0 items-center gap-4">
+                            <span
+                              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border text-xl ${
+                                editionOuverte
+                                  ? "border-violet-300/50 bg-violet-500/20 text-violet-200"
+                                  : "border-slate-600 bg-slate-900/60 text-slate-300"
+                              }`}
+                            >
+                              {editionOuverte ? "▼" : "▶"}
+                            </span>
+
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-300">
+                                Édition n° {indexEdition + 1}
+                              </p>
+
+                              <h3 className="mt-1 break-words text-xl font-black text-white sm:text-2xl">
+                                📚 {nomEdition}
+                              </h3>
+                            </div>
+                          </div>
+
+                          <div className="grid w-full grid-cols-2 gap-3 sm:w-auto">
+                            <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-center">
+                              <p className="text-xs uppercase tracking-wider text-blue-200">
+                                Cartes
+                              </p>
+
+                              <p className="mt-1 text-lg font-black text-white">
+                                {cartesEdition.length}
+                              </p>
+                            </div>
+
+                            <div className="rounded-xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 text-center">
+                              <p className="text-xs uppercase tracking-wider text-yellow-200">
+                                Valeur
+                              </p>
+
+                              <p className="mt-1 text-lg font-black text-yellow-300">
+                                {valeurEdition.toLocaleString(
+                                  "fr-FR",
+                                  {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  }
+                                )}{" "}
+                                €
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+
+                        {editionOuverte && (
+                          <div className="border-t border-slate-700 p-4 sm:p-5">
+                            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+                              {cartesEdition.map((carte) => {
+                                const historiqueCarte =
+                                  historiquePrix
+                                    .filter(
+                                      (ligne) =>
+                                        ligne.carte_id ===
+                                        carte.identifiant
+                                    )
+                                    .map((ligne) => ({
+                                      prix: ligne.prix,
+                                      date: new Date(
+                                        ligne.date_releve
+                                      ).toLocaleDateString(
+                                        "fr-FR",
+                                        {
+                                          day: "2-digit",
+                                          month: "2-digit",
+                                        }
+                                      ),
+                                    }));
+
+                                return (
+                                  <PokemonCard
+                                    key={carte.identifiant}
+                                    nom={carte.nom}
+                                    edition={carte.edition}
+                                    type={carte.type}
+                                    etat={carte.etat}
+                                    prix={carte.prix}
+                                    image={carte.image}
+                                    historique={historiqueCarte}
+                                    selectionnee={cartesSelectionnees.includes(
+                                      carte.identifiant
+                                    )}
+                                    onSelectionner={() =>
+                                      selectionnerCarte(
+                                        carte.identifiant
+                                      )
+                                    }
+                                    onVoirGraphique={() =>
+                                      ouvrirGraphiqueCarte(
+                                        carte.identifiant
+                                      )
+                                    }
+                                    onModifier={() =>
+                                      modifierCarteDirectement(
+                                        carte.identifiant
+                                      )
+                                    }
+                                    onSupprimer={() =>
+                                      supprimerUneCarte(
+                                        carte.identifiant
+                                      )
+                                    }
+                                    favori={favoris.includes(
+                                      carte.identifiant
+                                    )}
+                                    onFavori={() =>
+                                      basculerFavori(
+                                        carte.identifiant
+                                      )
+                                    }
+                                    onAgrandir={() =>
+                                      setCarteAgrandie(carte)
+                                    }
+                                  />
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </article>
+                    );
                   }
-                ),
-              }));
-
-            return (
-              <PokemonCard
-                key={carte.identifiant}
-                nom={carte.nom}
-                edition={carte.edition}
-                type={carte.type}
-                etat={carte.etat}
-                prix={carte.prix}
-                image={carte.image}
-                historique={historiqueCarte}
-                selectionnee={cartesSelectionnees.includes(carte.identifiant)}
-                onSelectionner={() =>
-                  selectionnerCarte(carte.identifiant)
-                }
-                onVoirGraphique={() =>
-                  ouvrirGraphiqueCarte(carte.identifiant)
-                }
-                onModifier={() =>
-                  modifierCarteDirectement(carte.identifiant)
-                }
-                onSupprimer={() =>
-                  supprimerUneCarte(carte.identifiant)
-                }
-                favori={favoris.includes(carte.identifiant)}
-                onFavori={() => basculerFavori(carte.identifiant)}
-                onAgrandir={() => setCarteAgrandie(carte)}
-              />
-            );
-          })}
-        </div>
+                )}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
       {carteAgrandie && (
