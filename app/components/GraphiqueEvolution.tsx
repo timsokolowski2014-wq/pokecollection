@@ -77,21 +77,34 @@ function prixCarteALaDate(
   const finJour = new Date(date);
   finJour.setHours(23, 59, 59, 999);
 
-  const lignes = historiquePrix
-    .filter(
-      (ligne) =>
-        ligne.carte_id === carte.identifiant &&
-        new Date(ligne.date_releve).getTime() <= finJour.getTime()
-    )
+  const lignesCarte = historiquePrix
+    .filter((ligne) => ligne.carte_id === carte.identifiant)
     .sort(
       (a, b) =>
         new Date(a.date_releve).getTime() -
         new Date(b.date_releve).getTime()
     );
 
-  return lignes.length > 0
-    ? Number(lignes[lignes.length - 1].prix) || 0
-    : Number(carte.prix) || 0;
+  if (lignesCarte.length === 0) {
+    return Number(carte.prix) || 0;
+  }
+
+  const lignesAvantOuPendantLaDate = lignesCarte.filter(
+    (ligne) =>
+      new Date(ligne.date_releve).getTime() <= finJour.getTime()
+  );
+
+  if (lignesAvantOuPendantLaDate.length > 0) {
+    return (
+      Number(
+        lignesAvantOuPendantLaDate[
+          lignesAvantOuPendantLaDate.length - 1
+        ].prix
+      ) || 0
+    );
+  }
+
+  return Number(lignesCarte[0].prix) || Number(carte.prix) || 0;
 }
 
 function creerPoints(
@@ -281,7 +294,12 @@ export default function GraphiqueEvolution({
                 <YAxis
                   stroke="#94a3b8"
                   width={75}
-                  domain={["auto", "auto"]}
+                  domain={[
+                    (minimum: number) =>
+                      Math.max(0, Math.floor((minimum - 0.05) * 100) / 100),
+                    (maximum: number) =>
+                      Math.ceil((maximum + 0.05) * 100) / 100,
+                  ]}
                   tickFormatter={(valeur) => `${Number(valeur).toFixed(2)} €`}
                   axisLine={false}
                   tickLine={false}

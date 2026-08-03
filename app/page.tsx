@@ -2167,13 +2167,7 @@ const valeurCollection = cartes.reduce((total, carte) => {
         <>
           <div className="mb-7 mt-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-300">
-                Toute la collection
-              </p>
-
-              <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
-                📚 Mes cartes
-              </h2>
+            
             </div>
 
             <p className="text-slate-400">
