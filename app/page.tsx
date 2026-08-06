@@ -3329,17 +3329,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
 
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                <div className="flex h-16 w-32 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/90 p-2 shadow-lg">
-                                  <img
-                                    src={blocEdition.logo}
-                                    alt={`Logo ${blocEdition.nom}`}
-                                    className="max-h-12 max-w-full object-contain"
-                                    onError={(evenement) => {
-                                      evenement.currentTarget.style.display =
-                                        "none";
-                                    }}
-                                  />
-                                </div>
+
 
                                 <div className="min-w-0">
                                   <p
