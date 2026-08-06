@@ -19,6 +19,7 @@ type Carte = {
   image: string;
   idApi: string;
   miseAJourAuto: boolean;
+  proprietaire: "Timothée" | "Valentin";
 };
 
 type HistoriquePrix = {
@@ -40,6 +41,12 @@ export default function Home() {
   const [prix, setPrix] = useState("");
   const [image, setImage] = useState("");
   const [idApi, setIdApi] = useState("");
+  const [proprietaireCarte, setProprietaireCarte] = useState<
+    "Timothée" | "Valentin"
+  >("Timothée");
+  const [collectionActive, setCollectionActive] = useState<
+    "Timothée" | "Valentin"
+  >("Timothée");
 
   const [recherche, setRecherche] = useState("");
   const [filtreType, setFiltreType] = useState("");
@@ -47,11 +54,10 @@ export default function Home() {
   const [miseAJourPrixEnCours, setMiseAJourPrixEnCours] = useState(false);
   const [cartesSelectionnees, setCartesSelectionnees] = useState<number[]>([]);
   const [favoris, setFavoris] = useState<number[]>([]);
-  const [afficherFavoris, setAfficherFavoris] = useState(false);
   const [carteAgrandie, setCarteAgrandie] = useState<Carte | null>(null);
   const [editionsOuvertes, setEditionsOuvertes] = useState<string[]>([]);
   const [modeCollection, setModeCollection] = useState<
-    "cartes" | "editions" | "favoris"
+    "cartes" | "editions" | "favoris" | "dresseurs" | "energies" | "pokemons"
   >("cartes");
 
   const [graphiqueAffiche, setGraphiqueAffiche] = useState<
@@ -68,7 +74,19 @@ export default function Home() {
 const [messageNotification, setMessageNotification] =
   useState("");
 
-   const statistiquesParEdition = cartes.reduce<
+const cartesCollection = cartes.filter(
+  (carte) => carte.proprietaire === collectionActive
+);
+
+const nombreCartesTimothee = cartes.filter(
+  (carte) => carte.proprietaire === "Timothée"
+).length;
+
+const nombreCartesValentin = cartes.filter(
+  (carte) => carte.proprietaire === "Valentin"
+).length;
+
+   const statistiquesParEdition = cartesCollection.reduce<
   Record<string, { nombre: number; valeur: number }>
 >((statistiques, carte) => {
   const edition = carte.edition || "Sans édition";
@@ -90,7 +108,7 @@ const [messageNotification, setMessageNotification] =
   useEffect(() => {
     try {
       const favorisEnregistres = window.localStorage.getItem(
-        "pokecollection-favoris"
+        `pokecollection-favoris-${collectionActive}`
       );
 
       if (favorisEnregistres) {
@@ -107,14 +125,22 @@ const [messageNotification, setMessageNotification] =
     } catch (error) {
       console.error("Impossible de charger les favoris :", error);
     }
-  }, []);
+  }, [collectionActive]);
 
   useEffect(() => {
     window.localStorage.setItem(
-      "pokecollection-favoris",
+      `pokecollection-favoris-${collectionActive}`,
       JSON.stringify(favoris)
     );
-  }, [favoris]);
+  }, [favoris, collectionActive]);
+
+  useEffect(() => {
+    setCartesSelectionnees([]);
+    setGraphiqueAffiche(null);
+    setCarteAgrandie(null);
+    setModeCollection("cartes");
+    setProprietaireCarte(collectionActive);
+  }, [collectionActive]);
 
   useEffect(() => {
     async function chargerDonnees() {
@@ -142,6 +168,8 @@ const [messageNotification, setMessageNotification] =
         image: carte.image ?? "",
         idApi: carte.id_api ?? "",
         miseAJourAuto: carte.mise_a_jour_auto ?? true,
+        proprietaire:
+          carte.proprietaire === "Valentin" ? "Valentin" : "Timothée",
       }));
 
       setCartes(cartesChargees);
@@ -203,6 +231,7 @@ const [messageNotification, setMessageNotification] =
         image: image.trim(),
         id_api: idApi.trim(),
         mise_a_jour_auto: true,
+        proprietaire: proprietaireCarte,
       })
       .select()
       .single();
@@ -223,6 +252,8 @@ const [messageNotification, setMessageNotification] =
       image: data.image ?? "",
       idApi: data.id_api ?? "",
       miseAJourAuto: data.mise_a_jour_auto ?? true,
+      proprietaire:
+        data.proprietaire === "Valentin" ? "Valentin" : proprietaireCarte,
     };
 
     setCartes((anciennesCartes) => [...anciennesCartes, nouvelleCarte]);
@@ -245,10 +276,11 @@ window.setTimeout(() => {
     setPrix("");
     setImage("");
     setIdApi("");
+    setProprietaireCarte(collectionActive);
   }
 
   async function mettreAJourPrix() {
-    const cartesAMettreAJour = cartes.filter(
+    const cartesAMettreAJour = cartesCollection.filter(
       (carte) => carte.miseAJourAuto && carte.idApi
     );
 
@@ -660,6 +692,7 @@ window.setTimeout(() => {
         image: carteEnModification.image.trim(),
         id_api: carteEnModification.idApi.trim(),
         mise_a_jour_auto: carteEnModification.miseAJourAuto,
+        proprietaire: carteEnModification.proprietaire,
       })
       .eq("id", carteEnModification.identifiant);
 
@@ -757,7 +790,90 @@ window.setTimeout(() => {
     return correspondance?.[1] ?? 999999;
   }
 
-  const cartesFiltrees = cartes
+  function informationsBlocEdition(nomEdition: string) {
+    const rang = rangChronologiqueEdition(nomEdition);
+    const annee = Math.floor(rang / 100);
+
+    if (annee >= 2023) {
+      return {
+        nom: "Écarlate et Violet",
+        logo: "https://assets.tcgdex.net/en/sv/sv01/logo.webp",
+        fond: "from-red-950/55 via-violet-950/35 to-slate-900",
+        bordure: "border-violet-400/35",
+        texte: "text-violet-200",
+      };
+    }
+
+    if (annee >= 2020) {
+      return {
+        nom: "Épée et Bouclier",
+        logo: "https://assets.tcgdex.net/en/swsh/swsh1/logo.webp",
+        fond: "from-blue-950/55 via-pink-950/25 to-slate-900",
+        bordure: "border-blue-400/35",
+        texte: "text-blue-200",
+      };
+    }
+
+    if (annee >= 2017) {
+      return {
+        nom: "Soleil et Lune",
+        logo: "https://assets.tcgdex.net/en/sm/sm1/logo.webp",
+        fond: "from-yellow-950/45 via-purple-950/30 to-slate-900",
+        bordure: "border-yellow-400/35",
+        texte: "text-yellow-200",
+      };
+    }
+
+    if (annee >= 2014) {
+      return {
+        nom: "XY",
+        logo: "https://assets.tcgdex.net/en/xy/xy1/logo.webp",
+        fond: "from-blue-950/50 via-red-950/25 to-slate-900",
+        bordure: "border-cyan-400/35",
+        texte: "text-cyan-200",
+      };
+    }
+
+    if (annee >= 2011) {
+      return {
+        nom: "Noir et Blanc",
+        logo: "https://assets.tcgdex.net/en/bw/bw1/logo.webp",
+        fond: "from-slate-700/55 via-slate-950 to-slate-900",
+        bordure: "border-slate-300/35",
+        texte: "text-slate-200",
+      };
+    }
+
+    if (annee >= 2007) {
+      return {
+        nom: "Diamant et Perle",
+        logo: "https://assets.tcgdex.net/en/dp/dp1/logo.webp",
+        fond: "from-cyan-950/45 via-violet-950/25 to-slate-900",
+        bordure: "border-cyan-300/35",
+        texte: "text-cyan-100",
+      };
+    }
+
+    if (annee >= 2003) {
+      return {
+        nom: "EX",
+        logo: "https://assets.tcgdex.net/en/ex/ex1/logo.webp",
+        fond: "from-orange-950/45 via-red-950/20 to-slate-900",
+        bordure: "border-orange-400/35",
+        texte: "text-orange-200",
+      };
+    }
+
+    return {
+      nom: "Wizards / Classique",
+      logo: "https://assets.tcgdex.net/en/base/base1/logo.webp",
+      fond: "from-yellow-950/40 via-blue-950/25 to-slate-900",
+      bordure: "border-yellow-300/35",
+      texte: "text-yellow-100",
+    };
+  }
+
+  const cartesFiltrees = cartesCollection
     .filter((carte) => {
       const texteRecherche = recherche.trim().toLowerCase();
 
@@ -792,6 +908,90 @@ window.setTimeout(() => {
       return a.nom.localeCompare(b.nom, "fr");
     });
 
+  const typesDresseur = [
+  "dresseur",
+  "trainer",
+  "supporter",
+  "objet",
+  "outil",
+  "outil pokemon",
+  "stade",
+];
+
+const typesEnergie = [
+  "energie",
+  "energie feu",
+  "energie eau",
+  "energie plante",
+  "energie electrique",
+  "energie psy",
+  "energie combat",
+  "energie obscurite",
+  "energie metal",
+  "energie fee",
+  "energie speciale",
+];
+
+function normaliserTypeCarte(typeCarte: string) {
+  return typeCarte
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+const cartesDresseurs = cartesFiltrees.filter((carte) => {
+  const typeNormalise = normaliserTypeCarte(carte.type);
+
+  return (
+    typeNormalise.startsWith("dresseur") ||
+    typesDresseur.includes(typeNormalise)
+  );
+});
+
+const cartesEnergies = cartesFiltrees.filter((carte) => {
+  const typeNormalise = normaliserTypeCarte(carte.type);
+
+  return (
+    typeNormalise.startsWith("energie") ||
+    typesEnergie.includes(typeNormalise)
+  );
+});
+
+const cartesPokemon = cartesFiltrees.filter((carte) => {
+  const typeNormalise = normaliserTypeCarte(carte.type);
+
+  const estDresseur =
+    typeNormalise.startsWith("dresseur") ||
+    typesDresseur.includes(typeNormalise);
+
+  const estEnergie =
+    typeNormalise.startsWith("energie") ||
+    typesEnergie.includes(typeNormalise);
+
+  return !estDresseur && !estEnergie;
+});
+
+const nombreDresseurs = cartesCollection.filter((carte) => {
+  const typeNormalise = normaliserTypeCarte(carte.type);
+
+  return (
+    typeNormalise.startsWith("dresseur") ||
+    typesDresseur.includes(typeNormalise)
+  );
+}).length;
+
+const nombreEnergies = cartesCollection.filter((carte) => {
+  const typeNormalise = normaliserTypeCarte(carte.type);
+
+  return (
+    typeNormalise.startsWith("energie") ||
+    typesEnergie.includes(typeNormalise)
+  );
+}).length;
+
+const nombrePokemon = cartesCollection.length - nombreDresseurs - nombreEnergies;
+
   const cartesParEdition = Object.entries(
     cartesFiltrees.reduce<Record<string, Carte[]>>((groupes, carte) => {
       const nomEdition = carte.edition || "Sans édition";
@@ -822,26 +1022,26 @@ window.setTimeout(() => {
     }
     // L'ouverture automatique ne doit se faire qu'après le premier chargement.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartes.length]);
+  }, [cartesCollection.length, collectionActive]);
 
-const valeurCollection = cartes.reduce((total, carte) => {
+const valeurCollection = cartesCollection.reduce((total, carte) => {
   const prixCarte = Number(carte.prix);
 
   return total + (Number.isNaN(prixCarte) ? 0 : prixCarte);
 }, 0);
 
   const cartePlusChere =
-    cartes.length > 0
-      ? cartes.reduce((plusChere, carte) =>
+    cartesCollection.length > 0
+      ? cartesCollection.reduce((plusChere, carte) =>
           Number(carte.prix) > Number(plusChere.prix) ? carte : plusChere
         )
       : null;
 
-  const top5CartesPlusCheres = [...cartes]
+  const top5CartesPlusCheres = [...cartesCollection]
     .sort((a, b) => Number(b.prix) - Number(a.prix))
     .slice(0, 5);
 
- const statistiquesParType = cartes.reduce<
+ const statistiquesParType = cartesCollection.reduce<
   Record<string, { nombre: number; valeur: number }>
 >((statistiques, carte) => {
   const typeCarte = carte.type || "Sans type";
@@ -876,7 +1076,7 @@ const valeurCollection = cartes.reduce((total, carte) => {
     }
   });
 
-  const valeurDebutJour = cartes.reduce(
+  const valeurDebutJour = cartesCollection.reduce(
     (total, carte) =>
       total +
       (premiereValeurParCarte.get(carte.identifiant) ?? carte.prix),
@@ -885,7 +1085,7 @@ const valeurCollection = cartes.reduce((total, carte) => {
 
   const evolutionAujourdhui = valeurCollection - valeurDebutJour;
 
-  const variationsCartes = cartes
+  const variationsCartes = cartesCollection
     .map((carte) => {
       const historiqueCarte = historiquePrix
         .filter((ligne) => ligne.carte_id === carte.identifiant)
@@ -902,13 +1102,36 @@ const valeurCollection = cartes.reduce((total, carte) => {
 
       return {
         carte,
+        prixPrecedent,
+        prixActuel,
         variation: prixActuel - prixPrecedent,
       };
     })
     .filter(
-      (variation): variation is { carte: Carte; variation: number } =>
-        variation !== null
+      (
+        variation
+      ): variation is {
+        carte: Carte;
+        prixPrecedent: number;
+        prixActuel: number;
+        variation: number;
+      } => variation !== null
     );
+
+  const cartesAyantEvolue = variationsCartes
+    .filter((variation) => Math.abs(variation.variation) >= 0.005)
+    .sort(
+      (a, b) =>
+        Math.abs(b.variation) - Math.abs(a.variation)
+    );
+
+  const cartesAyantAugmente = cartesAyantEvolue
+    .filter((variation) => variation.variation > 0)
+    .sort((a, b) => b.variation - a.variation);
+
+  const cartesAyantBaisse = cartesAyantEvolue
+    .filter((variation) => variation.variation < 0)
+    .sort((a, b) => a.variation - b.variation);
 
   const plusForteHausse =
     variationsCartes.length > 0
@@ -1054,11 +1277,68 @@ const valeurCollection = cartes.reduce((total, carte) => {
 
   return (
 
-   <main className="min-h-screen bg-transparent px-3 py-4 text-white sm:p-8">
+   <main
+    className={`min-h-screen px-3 py-4 text-white transition-colors duration-500 sm:p-8 ${
+      collectionActive === "Timothée"
+        ? "bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.28),_rgba(2,6,23,0.98)_48%)]"
+        : "bg-[radial-gradient(circle_at_top,_rgba(147,51,234,0.32),_rgba(24,5,43,0.98)_48%)]"
+    }`}
+  >
   <HeaderPokemon
-    totalCartes={cartes.length}
+    totalCartes={cartesCollection.length}
     valeurCollection={valeurCollection}
   />
+
+  <section className="mx-auto mb-8 mt-4 w-full max-w-5xl">
+    <div className="grid grid-cols-2 gap-3 rounded-3xl border border-white/10 bg-slate-950/55 p-2 shadow-2xl backdrop-blur-xl sm:gap-5 sm:p-3">
+      <button
+        type="button"
+        onClick={() => setCollectionActive("Timothée")}
+        className={`rounded-2xl border px-3 py-4 text-center transition duration-300 sm:px-6 sm:py-5 ${
+          collectionActive === "Timothée"
+            ? "border-blue-300/70 bg-gradient-to-br from-blue-600 to-cyan-700 text-white shadow-xl shadow-blue-950/40"
+            : "border-slate-700 bg-slate-900/80 text-slate-300 hover:border-blue-400/50 hover:bg-slate-800"
+        }`}
+      >
+        <span className="block text-sm font-black sm:text-xl">
+          👤 Collection de Timothée
+        </span>
+        <span className="mt-2 block text-xs font-semibold opacity-80 sm:text-sm">
+          🃏 {nombreCartesTimothee} carte{nombreCartesTimothee > 1 ? "s" : ""}
+        </span>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setCollectionActive("Valentin")}
+        className={`rounded-2xl border px-3 py-4 text-center transition duration-300 sm:px-6 sm:py-5 ${
+          collectionActive === "Valentin"
+            ? "border-violet-300/70 bg-gradient-to-br from-violet-600 to-fuchsia-700 text-white shadow-xl shadow-violet-950/40"
+            : "border-slate-700 bg-slate-900/80 text-slate-300 hover:border-violet-400/50 hover:bg-slate-800"
+        }`}
+      >
+        <span className="block text-sm font-black sm:text-xl">
+          👤 Collection de Valentin
+        </span>
+        <span className="mt-2 block text-xs font-semibold opacity-80 sm:text-sm">
+          🃏 {nombreCartesValentin} carte{nombreCartesValentin > 1 ? "s" : ""}
+        </span>
+      </button>
+    </div>
+
+    <p className="mt-3 text-center text-sm font-bold text-slate-300">
+      Collection active :{" "}
+      <span
+        className={
+          collectionActive === "Timothée"
+            ? "text-blue-300"
+            : "text-violet-300"
+        }
+      >
+        {collectionActive}
+      </span>
+    </p>
+  </section>
 
   <Notification
     message={messageNotification}
@@ -1083,6 +1363,8 @@ const valeurCollection = cartes.reduce((total, carte) => {
         setImage={setImage}
         idApi={idApi}
         setIdApi={setIdApi}
+        proprietaire={proprietaireCarte}
+        setProprietaire={setProprietaireCarte}
         onEnregistrer={ajouterCarte}
       />
 
@@ -1121,7 +1403,7 @@ const valeurCollection = cartes.reduce((total, carte) => {
         </div>
 
         <p className="mt-5 text-4xl font-black text-white">
-          {cartes.length}
+          {cartesCollection.length}
         </p>
 
         <p className="mt-2 text-sm text-slate-400">
@@ -1177,7 +1459,7 @@ const valeurCollection = cartes.reduce((total, carte) => {
         </div>
 
         <p className="mt-5 text-4xl font-black text-white">
-          {(cartes.length > 0
+          {(cartesCollection.length > 0
             ? valeurCollection / cartes.length
             : 0
           ).toLocaleString("fr-FR", {
@@ -1247,6 +1529,81 @@ const valeurCollection = cartes.reduce((total, carte) => {
 
         <p className="mt-2 text-sm text-slate-400">
           Depuis le premier relevé du jour
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {/* Catégories principales */}
+  <div className="mt-5 grid gap-5 sm:grid-cols-3">
+    <div className="group relative overflow-hidden rounded-3xl border border-cyan-300/25 bg-gradient-to-br from-slate-800 to-cyan-950/30 p-6 shadow-xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/60 hover:shadow-cyan-950/40">
+      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-cyan-300/10 blur-2xl" />
+
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold uppercase tracking-wider text-slate-400">
+            Nombre d’énergies
+          </p>
+
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/15 text-2xl">
+            ⚪
+          </span>
+        </div>
+
+        <p className="mt-5 text-4xl font-black text-cyan-100">
+          {nombreEnergies}
+        </p>
+
+        <p className="mt-2 text-sm text-slate-400">
+          Carte{nombreEnergies > 1 ? "s" : ""} Énergie
+        </p>
+      </div>
+    </div>
+
+    <div className="group relative overflow-hidden rounded-3xl border border-yellow-400/25 bg-gradient-to-br from-slate-800 to-amber-950/30 p-6 shadow-xl transition duration-300 hover:-translate-y-1 hover:border-yellow-300/60 hover:shadow-amber-950/40">
+      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-yellow-400/10 blur-2xl" />
+
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold uppercase tracking-wider text-slate-400">
+            Nombre de dresseurs
+          </p>
+
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-400/15 text-2xl">
+            🧑‍🏫
+          </span>
+        </div>
+
+        <p className="mt-5 text-4xl font-black text-yellow-300">
+          {nombreDresseurs}
+        </p>
+
+        <p className="mt-2 text-sm text-slate-400">
+          Carte{nombreDresseurs > 1 ? "s" : ""} Dresseur
+        </p>
+      </div>
+    </div>
+
+    <div className="group relative overflow-hidden rounded-3xl border border-blue-400/25 bg-gradient-to-br from-slate-800 to-blue-950/35 p-6 shadow-xl transition duration-300 hover:-translate-y-1 hover:border-blue-300/60 hover:shadow-blue-950/50">
+      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-blue-500/10 blur-2xl" />
+
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold uppercase tracking-wider text-slate-400">
+            Nombre de Pokémon
+          </p>
+
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/15 text-2xl">
+            ⚡
+          </span>
+        </div>
+
+        <p className="mt-5 text-4xl font-black text-blue-200">
+          {nombrePokemon}
+        </p>
+
+        <p className="mt-2 text-sm text-slate-400">
+          Carte{nombrePokemon > 1 ? "s" : ""} Pokémon
         </p>
       </div>
     </div>
@@ -1500,6 +1857,240 @@ const valeurCollection = cartes.reduce((total, carte) => {
   )}
 </section>
 
+<section className="mt-14">
+  <div className="mb-7">
+    <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-300">
+      Mouvements de prix
+    </p>
+
+    <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
+      📊 Évolution des cartes
+    </h2>
+
+    <p className="mt-2 text-slate-400">
+      Les cartes sont séparées selon leur dernière hausse ou leur dernière baisse.
+    </p>
+  </div>
+
+  <div className="grid gap-7 xl:grid-cols-2">
+    {/* Cartes en hausse */}
+    <div className="overflow-hidden rounded-3xl border border-green-400/25 bg-gradient-to-br from-slate-900 via-slate-900 to-green-950/30 p-4 shadow-2xl shadow-green-950/20 sm:p-6">
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-green-300">
+            Progressions
+          </p>
+
+          <h3 className="mt-2 text-2xl font-black text-white">
+            📈 Cartes ayant augmenté
+          </h3>
+        </div>
+
+        <span className="rounded-full border border-green-300/30 bg-green-400/10 px-4 py-2 text-sm font-black text-green-300">
+          {cartesAyantAugmente.length}
+        </span>
+      </div>
+
+      {cartesAyantAugmente.length === 0 ? (
+        <div className="rounded-2xl border border-slate-700 bg-slate-800/70 p-8 text-center text-slate-400">
+          Aucune hausse enregistrée pour le moment.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {cartesAyantAugmente.map(
+            ({ carte, prixPrecedent, prixActuel, variation }) => (
+              <article
+                key={carte.identifiant}
+                className="group rounded-2xl border border-green-400/20 bg-slate-800/85 p-4 transition duration-300 hover:-translate-y-1 hover:border-green-300/60 hover:shadow-xl hover:shadow-green-950/30"
+              >
+                <div className="flex gap-4">
+                  <div className="flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-950/60 p-2">
+                    {carte.image ? (
+                      <img
+                        src={carte.image}
+                        alt={carte.nom}
+                        className="h-full w-full rounded-lg object-contain transition duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <span className="text-center text-xs text-slate-500">
+                        Image indisponible
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <h4 className="break-words text-xl font-black text-white">
+                      {carte.nom}
+                    </h4>
+
+                    <p className="mt-1 text-sm text-slate-400">
+                      {carte.edition}
+                    </p>
+
+                    <p className="mt-3 text-3xl font-black text-green-400">
+                      +{variation.toLocaleString("fr-FR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      €
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-slate-950/45 p-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Avant
+                    </p>
+
+                    <p className="mt-1 font-black text-slate-200">
+                      {prixPrecedent.toLocaleString("fr-FR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      €
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-green-950/30 p-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-green-300/70">
+                      Maintenant
+                    </p>
+
+                    <p className="mt-1 font-black text-green-300">
+                      {prixActuel.toLocaleString("fr-FR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      €
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => ouvrirGraphiqueCarte(carte.identifiant)}
+                  className="mt-4 w-full rounded-xl border border-green-300/25 bg-green-400/10 px-4 py-3 font-bold text-green-100 transition hover:border-green-300/60 hover:bg-green-400/20"
+                >
+                  📊 Voir son graphique
+                </button>
+              </article>
+            )
+          )}
+        </div>
+      )}
+    </div>
+
+    {/* Cartes en baisse */}
+    <div className="overflow-hidden rounded-3xl border border-red-400/25 bg-gradient-to-br from-slate-900 via-slate-900 to-red-950/30 p-4 shadow-2xl shadow-red-950/20 sm:p-6">
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-red-300">
+            Diminutions
+          </p>
+
+          <h3 className="mt-2 text-2xl font-black text-white">
+            📉 Cartes ayant baissé
+          </h3>
+        </div>
+
+        <span className="rounded-full border border-red-300/30 bg-red-400/10 px-4 py-2 text-sm font-black text-red-300">
+          {cartesAyantBaisse.length}
+        </span>
+      </div>
+
+      {cartesAyantBaisse.length === 0 ? (
+        <div className="rounded-2xl border border-slate-700 bg-slate-800/70 p-8 text-center text-slate-400">
+          Aucune baisse enregistrée pour le moment.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {cartesAyantBaisse.map(
+            ({ carte, prixPrecedent, prixActuel, variation }) => (
+              <article
+                key={carte.identifiant}
+                className="group rounded-2xl border border-red-400/20 bg-slate-800/85 p-4 transition duration-300 hover:-translate-y-1 hover:border-red-300/60 hover:shadow-xl hover:shadow-red-950/30"
+              >
+                <div className="flex gap-4">
+                  <div className="flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-950/60 p-2">
+                    {carte.image ? (
+                      <img
+                        src={carte.image}
+                        alt={carte.nom}
+                        className="h-full w-full rounded-lg object-contain transition duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <span className="text-center text-xs text-slate-500">
+                        Image indisponible
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <h4 className="break-words text-xl font-black text-white">
+                      {carte.nom}
+                    </h4>
+
+                    <p className="mt-1 text-sm text-slate-400">
+                      {carte.edition}
+                    </p>
+
+                    <p className="mt-3 text-3xl font-black text-red-400">
+                      {variation.toLocaleString("fr-FR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      €
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-slate-950/45 p-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Avant
+                    </p>
+
+                    <p className="mt-1 font-black text-slate-200">
+                      {prixPrecedent.toLocaleString("fr-FR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      €
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-red-950/30 p-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-red-300/70">
+                      Maintenant
+                    </p>
+
+                    <p className="mt-1 font-black text-red-300">
+                      {prixActuel.toLocaleString("fr-FR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      €
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => ouvrirGraphiqueCarte(carte.identifiant)}
+                  className="mt-4 w-full rounded-xl border border-red-300/25 bg-red-400/10 px-4 py-3 font-bold text-red-100 transition hover:border-red-300/60 hover:bg-red-400/20"
+                >
+                  📊 Voir son graphique
+                </button>
+              </article>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+</section>
+
 <section className="mt-14 overflow-hidden rounded-3xl border border-blue-400/20 bg-slate-900/80 p-4 shadow-2xl backdrop-blur-xl sm:p-8">
   <div className="mb-7">
     <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-300">
@@ -1533,8 +2124,8 @@ const valeurCollection = cartes.reduce((total, carte) => {
           };
 
           const pourcentage =
-            cartes.length > 0
-              ? (statistiques.nombre / cartes.length) * 100
+            cartesCollection.length > 0
+              ? (statistiques.nombre / cartesCollection.length) * 100
               : 0;
 
           return (
@@ -1649,8 +2240,8 @@ const valeurCollection = cartes.reduce((total, carte) => {
               : 0;
 
           const pourcentage =
-            cartes.length > 0
-              ? (statistiques.nombre / cartes.length) * 100
+            cartesCollection.length > 0
+              ? (statistiques.nombre / cartesCollection.length) * 100
               : 0;
 
           const couleurs = [
@@ -1867,7 +2458,7 @@ const valeurCollection = cartes.reduce((total, carte) => {
         <section id="zone-graphiques" className="scroll-mt-6 mt-8">
           <GraphiqueEvolution
             mode={graphiqueAffiche}
-            cartes={cartes}
+            cartes={cartesCollection}
             historiquePrix={historiquePrix}
             carteId={carteGraphiqueId}
             edition={editionGraphique}
@@ -2070,6 +2661,8 @@ const valeurCollection = cartes.reduce((total, carte) => {
               className="mt-3 w-full rounded-2xl border border-slate-600 bg-slate-800 px-5 py-4 text-white outline-none transition focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/30"
             >
               <option value="">Tous les types</option>
+              <option value="Dresseur">🧑‍🏫 Dresseur</option>
+              <option value="Énergie">⚪ Énergie</option>
               <option value="Feu">🔥 Feu</option>
               <option value="Eau">💧 Eau</option>
               <option value="Plante">🌿 Plante</option>
@@ -2124,11 +2717,11 @@ const valeurCollection = cartes.reduce((total, carte) => {
       </section>
 
       <section className="mt-10">
-        <div className="mx-auto grid max-w-3xl grid-cols-3 gap-2 rounded-2xl border border-slate-700 bg-slate-900/80 p-2 shadow-xl backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto rounded-2xl border border-slate-700 bg-slate-900/80 p-2 shadow-xl backdrop-blur-xl">
           <button
             type="button"
             onClick={() => setModeCollection("cartes")}
-            className={`rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
+            className={`min-w-44 flex-1 rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
               modeCollection === "cartes"
                 ? "bg-blue-600 text-white shadow-lg shadow-blue-950/40"
                 : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -2140,7 +2733,7 @@ const valeurCollection = cartes.reduce((total, carte) => {
           <button
             type="button"
             onClick={() => setModeCollection("editions")}
-            className={`rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
+            className={`min-w-44 flex-1 rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
               modeCollection === "editions"
                 ? "bg-violet-600 text-white shadow-lg shadow-violet-950/40"
                 : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -2152,13 +2745,49 @@ const valeurCollection = cartes.reduce((total, carte) => {
           <button
             type="button"
             onClick={() => setModeCollection("favoris")}
-            className={`rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
+            className={`min-w-40 flex-1 rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
               modeCollection === "favoris"
                 ? "bg-yellow-400 text-slate-950 shadow-lg shadow-yellow-950/30"
                 : "text-slate-300 hover:bg-slate-800 hover:text-yellow-300"
             }`}
           >
             ⭐ Favoris
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setModeCollection("dresseurs")}
+            className={`min-w-44 flex-1 rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
+              modeCollection === "dresseurs"
+                ? "bg-orange-500 text-white shadow-lg shadow-orange-950/40"
+                : "text-slate-300 hover:bg-slate-800 hover:text-orange-300"
+            }`}
+          >
+            🧑‍🏫 Mes Dresseurs
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setModeCollection("energies")}
+            className={`min-w-44 flex-1 rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
+              modeCollection === "energies"
+                ? "bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-950/40"
+                : "text-slate-300 hover:bg-slate-800 hover:text-cyan-300"
+            }`}
+          >
+            ⚪ Mes Énergies
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setModeCollection("pokemons")}
+            className={`min-w-44 flex-1 rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
+              modeCollection === "pokemons"
+                ? "bg-green-600 text-white shadow-lg shadow-green-950/40"
+                : "text-slate-300 hover:bg-slate-800 hover:text-green-300"
+            }`}
+          >
+            ⚡ Mes Pokémon
           </button>
         </div>
       </section>
@@ -2167,7 +2796,13 @@ const valeurCollection = cartes.reduce((total, carte) => {
         <>
           <div className="mb-7 mt-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-            
+              <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-300">
+                Toute la collection
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
+                📚 Mes cartes
+              </h2>
             </div>
 
             <p className="text-slate-400">
@@ -2239,8 +2874,268 @@ const valeurCollection = cartes.reduce((total, carte) => {
         </>
       )}
 
+      {modeCollection === "dresseurs" && (
+        <section className="relative mt-10 overflow-hidden rounded-3xl border border-yellow-500/30 bg-gradient-to-br from-amber-950/70 via-slate-950 to-yellow-950/30 p-4 shadow-2xl shadow-amber-950/30 sm:p-6">
+          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-yellow-400/10 blur-3xl" />
+          <div className="relative">
+          <div className="mb-7 mt-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-300">
+                Cartes de Dresseur
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
+                🧑‍🏫 Mes Dresseurs
+              </h2>
+            </div>
+
+            <p className="text-slate-400">
+              {cartesDresseurs.length} carte
+              {cartesDresseurs.length > 1 ? "s" : ""}
+            </p>
+          </div>
+
+          {cartesDresseurs.length === 0 ? (
+            <div className="rounded-2xl bg-slate-800 p-8 text-center">
+              <p className="text-xl text-gray-300">
+                Aucune carte Dresseur trouvée. Pour classer une carte ici, donne-lui le type « Dresseur ».
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {cartesDresseurs.map((carte) => {
+                const historiqueCarte = historiquePrix
+                  .filter(
+                    (ligne) => ligne.carte_id === carte.identifiant
+                  )
+                  .map((ligne) => ({
+                    prix: ligne.prix,
+                    date: new Date(
+                      ligne.date_releve
+                    ).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    }),
+                  }));
+
+                return (
+                  <PokemonCard
+                    key={carte.identifiant}
+                    nom={carte.nom}
+                    edition={carte.edition}
+                    type={carte.type}
+                    etat={carte.etat}
+                    prix={carte.prix}
+                    image={carte.image}
+                    historique={historiqueCarte}
+                    selectionnee={cartesSelectionnees.includes(
+                      carte.identifiant
+                    )}
+                    onSelectionner={() =>
+                      selectionnerCarte(carte.identifiant)
+                    }
+                    onVoirGraphique={() =>
+                      ouvrirGraphiqueCarte(carte.identifiant)
+                    }
+                    onModifier={() =>
+                      modifierCarteDirectement(carte.identifiant)
+                    }
+                    onSupprimer={() =>
+                      supprimerUneCarte(carte.identifiant)
+                    }
+                    favori={favoris.includes(carte.identifiant)}
+                    onFavori={() =>
+                      basculerFavori(carte.identifiant)
+                    }
+                    onAgrandir={() =>
+                      setCarteAgrandie(carte)
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
+          </div>
+        </section>
+      )}
+
+      {modeCollection === "energies" && (
+        <section className="relative mt-10 overflow-hidden rounded-3xl border border-slate-300/30 bg-gradient-to-br from-slate-700/60 via-slate-950 to-cyan-950/30 p-4 shadow-2xl shadow-slate-950/40 sm:p-6">
+          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-200/10 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-8 left-8 text-8xl opacity-5">⚪</div>
+          <div className="relative">
+          <div className="mb-7 mt-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-300">
+                Cartes Énergie
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
+                ⚪ Mes Énergies
+              </h2>
+            </div>
+
+            <p className="text-slate-400">
+              {cartesEnergies.length} carte
+              {cartesEnergies.length > 1 ? "s" : ""}
+            </p>
+          </div>
+
+          {cartesEnergies.length === 0 ? (
+            <div className="rounded-2xl bg-slate-800 p-8 text-center">
+              <p className="text-xl text-gray-300">
+                Aucune carte Énergie trouvée. Pour classer une carte ici, choisis le type « Énergie » dans le formulaire.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {cartesEnergies.map((carte) => {
+                const historiqueCarte = historiquePrix
+                  .filter(
+                    (ligne) => ligne.carte_id === carte.identifiant
+                  )
+                  .map((ligne) => ({
+                    prix: ligne.prix,
+                    date: new Date(
+                      ligne.date_releve
+                    ).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    }),
+                  }));
+
+                return (
+                  <PokemonCard
+                    key={carte.identifiant}
+                    nom={carte.nom}
+                    edition={carte.edition}
+                    type={carte.type}
+                    etat={carte.etat}
+                    prix={carte.prix}
+                    image={carte.image}
+                    historique={historiqueCarte}
+                    selectionnee={cartesSelectionnees.includes(
+                      carte.identifiant
+                    )}
+                    onSelectionner={() =>
+                      selectionnerCarte(carte.identifiant)
+                    }
+                    onVoirGraphique={() =>
+                      ouvrirGraphiqueCarte(carte.identifiant)
+                    }
+                    onModifier={() =>
+                      modifierCarteDirectement(carte.identifiant)
+                    }
+                    onSupprimer={() =>
+                      supprimerUneCarte(carte.identifiant)
+                    }
+                    favori={favoris.includes(carte.identifiant)}
+                    onFavori={() =>
+                      basculerFavori(carte.identifiant)
+                    }
+                    onAgrandir={() =>
+                      setCarteAgrandie(carte)
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
+          </div>
+        </section>
+      )}
+
+      {modeCollection === "pokemons" && (
+        <section className="relative mt-10 overflow-hidden rounded-3xl border border-blue-400/30 bg-gradient-to-br from-blue-950/80 via-slate-950 to-cyan-950/30 p-4 shadow-2xl shadow-blue-950/40 sm:p-6">
+          <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
+          <div className="pointer-events-none absolute right-16 top-12 text-7xl opacity-10">⚡</div>
+          <div className="relative">
+          <div className="mb-7 mt-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-300">
+                Cartes Pokémon
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
+                ⚡ Mes Pokémon
+              </h2>
+            </div>
+
+            <p className="text-slate-400">
+              {cartesPokemon.length} carte
+              {cartesPokemon.length > 1 ? "s" : ""}
+            </p>
+          </div>
+
+          {cartesPokemon.length === 0 ? (
+            <div className="rounded-2xl bg-slate-800 p-8 text-center">
+              <p className="text-xl text-gray-300">
+                Aucune carte Pokémon ne correspond à ta recherche.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {cartesPokemon.map((carte) => {
+                const historiqueCarte = historiquePrix
+                  .filter(
+                    (ligne) => ligne.carte_id === carte.identifiant
+                  )
+                  .map((ligne) => ({
+                    prix: ligne.prix,
+                    date: new Date(
+                      ligne.date_releve
+                    ).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    }),
+                  }));
+
+                return (
+                  <PokemonCard
+                    key={carte.identifiant}
+                    nom={carte.nom}
+                    edition={carte.edition}
+                    type={carte.type}
+                    etat={carte.etat}
+                    prix={carte.prix}
+                    image={carte.image}
+                    historique={historiqueCarte}
+                    selectionnee={cartesSelectionnees.includes(
+                      carte.identifiant
+                    )}
+                    onSelectionner={() =>
+                      selectionnerCarte(carte.identifiant)
+                    }
+                    onVoirGraphique={() =>
+                      ouvrirGraphiqueCarte(carte.identifiant)
+                    }
+                    onModifier={() =>
+                      modifierCarteDirectement(carte.identifiant)
+                    }
+                    onSupprimer={() =>
+                      supprimerUneCarte(carte.identifiant)
+                    }
+                    favori={favoris.includes(carte.identifiant)}
+                    onFavori={() =>
+                      basculerFavori(carte.identifiant)
+                    }
+                    onAgrandir={() =>
+                      setCarteAgrandie(carte)
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
+          </div>
+        </section>
+      )}
+
       {modeCollection === "favoris" && (
-        <>
+        <section className="relative mt-10 overflow-hidden rounded-3xl border border-yellow-400/30 bg-gradient-to-br from-black via-slate-950 to-yellow-950/30 p-4 shadow-2xl shadow-yellow-950/20 sm:p-6">
+          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-yellow-400/10 blur-3xl" />
+          <div className="pointer-events-none absolute left-10 top-10 text-5xl opacity-10">⭐</div>
+          <div className="relative">
           <div className="mb-7 mt-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.22em] text-yellow-300">
@@ -2338,11 +3233,15 @@ const valeurCollection = cartes.reduce((total, carte) => {
                 })}
             </div>
           )}
-        </>
+          </div>
+        </section>
       )}
 
       {modeCollection === "editions" && (
-        <>
+        <section className="relative mt-10 overflow-hidden rounded-3xl border border-violet-400/30 bg-gradient-to-br from-violet-950/70 via-slate-950 to-indigo-950/30 p-4 shadow-2xl shadow-violet-950/30 sm:p-6">
+          <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-10 right-10 text-8xl opacity-5">📖</div>
+          <div className="relative">
           {cartesFiltrees.length === 0 ? (
             <div className="mt-10 rounded-2xl bg-slate-800 p-8 text-center">
               <p className="text-xl text-gray-300">
@@ -2397,13 +3296,16 @@ const valeurCollection = cartes.reduce((total, carte) => {
                       0
                     );
 
+                    const blocEdition =
+                      informationsBlocEdition(nomEdition);
+
                     return (
                       <article
                         key={nomEdition}
-                        className={`overflow-hidden rounded-2xl border transition duration-300 ${
+                        className={`overflow-hidden rounded-2xl border bg-gradient-to-br transition duration-300 ${blocEdition.fond} ${
                           editionOuverte
-                            ? "border-violet-400/40 bg-slate-800/90 shadow-xl"
-                            : "border-slate-700 bg-slate-800/55 hover:border-violet-400/30 hover:bg-slate-800/80"
+                            ? `${blocEdition.bordure} shadow-xl`
+                            : "border-slate-700/80 opacity-90 hover:opacity-100"
                         }`}
                       >
                         <button
@@ -2425,14 +3327,33 @@ const valeurCollection = cartes.reduce((total, carte) => {
                               {editionOuverte ? "▼" : "▶"}
                             </span>
 
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-300">
-                                Édition n° {indexEdition + 1}
-                              </p>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                <div className="flex h-16 w-32 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/90 p-2 shadow-lg">
+                                  <img
+                                    src={blocEdition.logo}
+                                    alt={`Logo ${blocEdition.nom}`}
+                                    className="max-h-12 max-w-full object-contain"
+                                    onError={(evenement) => {
+                                      evenement.currentTarget.style.display =
+                                        "none";
+                                    }}
+                                  />
+                                </div>
 
-                              <h3 className="mt-1 break-words text-xl font-black text-white sm:text-2xl">
-                                📚 {nomEdition}
-                              </h3>
+                                <div className="min-w-0">
+                                  <p
+                                    className={`text-xs font-bold uppercase tracking-[0.18em] ${blocEdition.texte}`}
+                                  >
+                                    Édition n° {indexEdition + 1} •{" "}
+                                    {blocEdition.nom}
+                                  </p>
+
+                                  <h3 className="mt-1 break-words text-xl font-black text-white sm:text-2xl">
+                                    📚 {nomEdition}
+                                  </h3>
+                                </div>
+                              </div>
                             </div>
                           </div>
 
@@ -2547,7 +3468,8 @@ const valeurCollection = cartes.reduce((total, carte) => {
               </div>
             </section>
           )}
-        </>
+          </div>
+        </section>
       )}
 
       {carteAgrandie && (

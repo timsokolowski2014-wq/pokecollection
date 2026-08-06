@@ -19,6 +19,8 @@ type FormulaireProps = {
   setImage: (valeur: string) => void;
   idApi: string;
   setIdApi: (valeur: string) => void;
+  proprietaire: "Timothée" | "Valentin";
+  setProprietaire: (valeur: "Timothée" | "Valentin") => void;
   onEnregistrer: () => void;
 };
 
@@ -85,6 +87,8 @@ export default function Formulaire({
   setImage,
   idApi,
   setIdApi,
+  proprietaire,
+  setProprietaire,
   onEnregistrer,
 }: FormulaireProps) {
   const [resultats, setResultats] = useState<CarteRecherche[]>([]);
@@ -240,6 +244,20 @@ export default function Formulaire({
     lecteur.readAsDataURL(fichier);
   }
 
+  const typePrincipal = type.startsWith("Dresseur")
+    ? "Dresseur"
+    : type.startsWith("Énergie")
+      ? "Énergie"
+      : type;
+
+  const sousTypeDresseur = type.startsWith("Dresseur - ")
+    ? type.replace("Dresseur - ", "")
+    : "";
+
+  const sousTypeEnergie = type.startsWith("Énergie ")
+    ? type.replace("Énergie ", "")
+    : "";
+
   const ajoutImpossible =
     selectionEnCours ||
     !nom.trim() ||
@@ -261,6 +279,38 @@ export default function Formulaire({
       </div>
 
       <div className="space-y-7">
+        <div>
+          <p className="text-lg font-bold text-white">
+            👤 Propriétaire de la carte
+          </p>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setProprietaire("Timothée")}
+              className={`rounded-2xl border px-4 py-4 font-bold transition ${
+                proprietaire === "Timothée"
+                  ? "border-blue-300/70 bg-blue-600 text-white shadow-lg shadow-blue-950/30"
+                  : "border-slate-600 bg-slate-700 text-slate-300 hover:border-blue-400/50"
+              }`}
+            >
+              👤 Timothée
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setProprietaire("Valentin")}
+              className={`rounded-2xl border px-4 py-4 font-bold transition ${
+                proprietaire === "Valentin"
+                  ? "border-violet-300/70 bg-violet-600 text-white shadow-lg shadow-violet-950/30"
+                  : "border-slate-600 bg-slate-700 text-slate-300 hover:border-violet-400/50"
+              }`}
+            >
+              👤 Valentin
+            </button>
+          </div>
+        </div>
+
         <label className="block text-lg font-bold text-white">
           🔴 Nom de la carte
           <input
@@ -358,11 +408,13 @@ export default function Formulaire({
         <label className="block text-lg font-bold text-white">
           🏷️ Type
           <select
-            value={type}
+            value={typePrincipal}
             onChange={(e) => setType(e.target.value)}
             className={classeChamp}
           >
             <option value="">Choisir un type</option>
+            <option value="Dresseur">🧑‍🏫 Dresseur</option>
+            <option value="Énergie">⚪ Énergie</option>
             <option value="Feu">🔥 Feu</option>
             <option value="Eau">💧 Eau</option>
             <option value="Plante">🌿 Plante</option>
@@ -383,6 +435,58 @@ export default function Formulaire({
             <option value="Incolore">⭐ Incolore</option>
           </select>
         </label>
+
+        {typePrincipal === "Dresseur" && (
+          <label className="block text-lg font-bold text-white">
+            🧑‍🏫 Sous-type Dresseur
+            <select
+              value={sousTypeDresseur}
+              onChange={(e) =>
+                setType(
+                  e.target.value
+                    ? `Dresseur - ${e.target.value}`
+                    : "Dresseur"
+                )
+              }
+              className={classeChamp}
+            >
+              <option value="">Dresseur général</option>
+              <option value="Supporter">Supporter</option>
+              <option value="Objet">Objet</option>
+              <option value="Outil Pokémon">Outil Pokémon</option>
+              <option value="Stade">Stade</option>
+            </select>
+          </label>
+        )}
+
+        {typePrincipal === "Énergie" && (
+          <label className="block text-lg font-bold text-white">
+            ⚪ Sous-type Énergie
+            <select
+              value={sousTypeEnergie}
+              onChange={(e) =>
+                setType(
+                  e.target.value
+                    ? `Énergie ${e.target.value}`
+                    : "Énergie"
+                )
+              }
+              className={classeChamp}
+            >
+              <option value="">Énergie générale</option>
+              <option value="Feu">🔥 Feu</option>
+              <option value="Eau">💧 Eau</option>
+              <option value="Plante">🌿 Plante</option>
+              <option value="Électrique">⚡ Électrique</option>
+              <option value="Psy">🧠 Psy</option>
+              <option value="Combat">🥊 Combat</option>
+              <option value="Obscurité">🌑 Obscurité</option>
+              <option value="Métal">⚙️ Métal</option>
+              <option value="Fée">🧚 Fée</option>
+              <option value="Spéciale">✨ Spéciale</option>
+            </select>
+          </label>
+        )}
 
         <label className="block text-lg font-bold text-white">
           ⭐ État
