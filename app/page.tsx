@@ -3329,7 +3329,17 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
 
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-
+                                <div className="flex h-16 w-32 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/90 p-2 shadow-lg">
+                                  <img
+                                    src={blocEdition.logo}
+                                    alt={`Logo ${blocEdition.nom}`}
+                                    className="max-h-12 max-w-full object-contain"
+                                    onError={(evenement) => {
+                                      evenement.currentTarget.style.display =
+                                        "none";
+                                    }}
+                                  />
+                                </div>
 
                                 <div className="min-w-0">
                                   <p
@@ -3380,7 +3390,35 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                         {editionOuverte && (
                           <div className="border-t border-slate-700 p-4 sm:p-5">
                             <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-                              {cartesEdition.map((carte) => {
+                              {[...cartesEdition]
+                                .sort((a, b) => {
+                                  const numeroTexteA = (a.numero || "").trim();
+                                  const numeroTexteB = (b.numero || "").trim();
+
+                                  const premierNombreA = Number(
+                                    numeroTexteA.match(/\d+/)?.[0] ??
+                                      Number.MAX_SAFE_INTEGER
+                                  );
+
+                                  const premierNombreB = Number(
+                                    numeroTexteB.match(/\d+/)?.[0] ??
+                                      Number.MAX_SAFE_INTEGER
+                                  );
+
+                                  if (premierNombreA !== premierNombreB) {
+                                    return premierNombreA - premierNombreB;
+                                  }
+
+                                  return numeroTexteA.localeCompare(
+                                    numeroTexteB,
+                                    "fr",
+                                    {
+                                      numeric: true,
+                                      sensitivity: "base",
+                                    }
+                                  );
+                                })
+                                .map((carte) => {
                                 const historiqueCarte =
                                   historiquePrix
                                     .filter(
