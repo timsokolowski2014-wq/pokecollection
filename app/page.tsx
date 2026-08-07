@@ -898,6 +898,32 @@ window.setTimeout(() => {
 
         if (differenceEdition !== 0) return differenceEdition;
 
+        const numeroTexteA = (a.numero || "").trim();
+        const numeroTexteB = (b.numero || "").trim();
+
+        const premierNombreA = Number(
+          numeroTexteA.match(/\d+/)?.[0] ?? Number.MAX_SAFE_INTEGER
+        );
+
+        const premierNombreB = Number(
+          numeroTexteB.match(/\d+/)?.[0] ?? Number.MAX_SAFE_INTEGER
+        );
+
+        if (premierNombreA !== premierNombreB) {
+          return premierNombreA - premierNombreB;
+        }
+
+        const comparaisonNumero = numeroTexteA.localeCompare(
+          numeroTexteB,
+          "fr",
+          {
+            numeric: true,
+            sensitivity: "base",
+          }
+        );
+
+        if (comparaisonNumero !== 0) return comparaisonNumero;
+
         return a.nom.localeCompare(b.nom, "fr");
       }
 
@@ -1460,7 +1486,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
 
         <p className="mt-5 text-4xl font-black text-white">
           {(cartesCollection.length > 0
-            ? valeurCollection / cartes.length
+            ? valeurCollection / cartesCollection.length
             : 0
           ).toLocaleString("fr-FR", {
             minimumFractionDigits: 2,

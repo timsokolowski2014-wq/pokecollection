@@ -101,6 +101,7 @@ export default function Formulaire({
 
   async function rechercherCartes() {
     const nomRecherche = nom.trim();
+    const numeroRecherche = numero.trim().split("/")[0].trim();
 
     if (nomRecherche.length < 2) {
       alert("Écris au moins 2 lettres dans le nom de la carte.");
@@ -115,11 +116,20 @@ export default function Formulaire({
 
     try {
       const parametres = new URLSearchParams();
-      parametres.set("name", nomRecherche);
-      parametres.set("pagination:page", "1");
-      parametres.set("pagination:itemsPerPage", "30");
 
-      const reponse = await fetch(
+      // TCGdex accepte une recherche partielle sur le nom.
+      parametres.set("name", nomRecherche);
+
+      // Si un numéro est renseigné, on l'envoie directement à TCGdex.
+      // Ainsi "225" et "225/198" recherchent tous les deux localId = 225.
+      if (numeroRecherche) {
+        parametres.set("localId", numeroRecherche);
+      }
+
+      parametres.set("pagination:page", "1");
+      parametres.set("pagination:itemsPerPage", "100");
+
+      let reponse = await fetch(
         `https://api.tcgdex.net/v2/fr/cards?${parametres.toString()}`
       );
 
@@ -127,15 +137,45 @@ export default function Formulaire({
         throw new Error("La recherche TCGdex a échoué.");
       }
 
-      const cartes: CarteRecherche[] = await reponse.json();
+      let cartes: CarteRecherche[] = await reponse.json();
+
+      // Petit secours si aucun résultat n'est trouvé :
+      // on retente le nom sans accents.
+      if (!Array.isArray(cartes) || cartes.length === 0) {
+        const nomSansAccents = nomRecherche
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+
+        if (nomSansAccents !== nomRecherche) {
+          const parametresSansAccents = new URLSearchParams();
+          parametresSansAccents.set("name", nomSansAccents);
+
+          if (numeroRecherche) {
+            parametresSansAccents.set("localId", numeroRecherche);
+          }
+
+          parametresSansAccents.set("pagination:page", "1");
+          parametresSansAccents.set("pagination:itemsPerPage", "100");
+
+          reponse = await fetch(
+            `https://api.tcgdex.net/v2/fr/cards?${parametresSansAccents.toString()}`
+          );
+
+          if (reponse.ok) {
+            cartes = await reponse.json();
+          }
+        }
+      }
 
       const cartesFiltrees = Array.isArray(cartes)
         ? cartes.filter((carte) => {
-            if (!numero.trim()) return true;
+            if (!numeroRecherche) return true;
 
-            return carte.localId
-              ?.toLowerCase()
-              .includes(numero.trim().toLowerCase());
+            return (
+              String(carte.localId ?? "")
+                .trim()
+                .toLowerCase() === numeroRecherche.toLowerCase()
+            );
           })
         : [];
 
