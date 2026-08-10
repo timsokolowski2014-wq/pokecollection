@@ -723,153 +723,339 @@ window.setTimeout(() => {
       .trim();
   }
 
-  const ordreChronologiqueEditions: Record<string, number> = {
-    "set de base": 199901,
-    "jungle": 199906,
-    "fossile": 199910,
-    "team rocket": 200004,
-    "neo genesis": 200012,
-    "neo discovery": 200106,
-    "neo revelation": 200110,
-    "neo destiny": 200202,
-    "expedition": 200209,
-    "aquapolis": 200301,
-    "skyridge": 200305,
-    "ex rubis & saphir": 200307,
-    "ex dragon": 200311,
-    "ex deoxys": 200502,
-    "ex createurs de legendes": 200602,
-    "diamant & perle": 200705,
-    "platine": 200902,
-    "heartgold soulsilver": 201002,
-    "noir & blanc": 201104,
-    "xy": 201402,
-    "promo xy": 201402,
-    "promotions xy": 201402,
-    "soleil et lune": 201702,
-    "gardiens ascendants": 201705,
-    "tonnerre perdu": 201811,
-    "duo de choc": 201902,
-    "alliance infaillible": 201905,
-    "epee et bouclier": 202002,
-    "regne de glace": 202106,
-    "stars etincelantes": 202202,
-    "astres radieux": 202205,
-    "astres radieux galerie de dresseurs": 202205,
-    "origine perdue": 202209,
-    "tempete argentee": 202211,
-    "ecarlate et violet": 202303,
-    "evolutions a paldea": 202306,
-    "151": 202309,
-    "faille paradoxe": 202311,
-    "destinees de paldea": 202401,
-    "mascarade crepusculaire": 202405,
-    "fable nebuleuse": 202408,
-    "couronne stellaire": 202409,
-    "etincelles deferlantes": 202411,
-    "evolutions prismatiques": 202501,
-    "rivalites destinees": 202505,
-    "foudre noire": 202507,
-    "flamme blanche": 202507,
-    "promotions svp black star": 202599,
-    "svp black star promos": 202599,
-    "promo svp black star": 202599,
+  type MetaEdition = {
+    ordre: number;
+    bloc: string;
   };
 
-  function rangChronologiqueEdition(nomEdition: string) {
-    const nomNormalise = normaliserNomEdition(nomEdition);
+  // Ordre PokéCardex : de la plus vieille édition à la plus récente.
+  // Le bloc est défini explicitement : on ne le devine plus avec l'année.
+  const metaEditions: Record<string, MetaEdition> = {
+    "promo black star wizards of the coast": { ordre: 1, bloc: "Wizards" },
+    "set de base": { ordre: 2, bloc: "Wizards" },
+    "jungle": { ordre: 3, bloc: "Wizards" },
+    "fossile": { ordre: 4, bloc: "Wizards" },
+    "base set 2": { ordre: 5, bloc: "Wizards" },
+    "team rocket": { ordre: 6, bloc: "Wizards" },
+    "gym heroes": { ordre: 7, bloc: "Wizards" },
+    "gym challenge": { ordre: 8, bloc: "Wizards" },
+    "neo genesis": { ordre: 9, bloc: "Wizards" },
+    "neo discovery": { ordre: 10, bloc: "Wizards" },
+    "neo revelation": { ordre: 11, bloc: "Wizards" },
+    "neo destiny": { ordre: 12, bloc: "Wizards" },
+    "legendary collection": { ordre: 13, bloc: "Wizards" },
+    "expedition": { ordre: 14, bloc: "Wizards" },
+    "aquapolis": { ordre: 15, bloc: "Wizards" },
+    "skyridge": { ordre: 16, bloc: "Wizards" },
+    "black star nintendo": { ordre: 17, bloc: "EX" },
+    "ex rubis & saphir": { ordre: 18, bloc: "EX" },
+    "ex rubis et saphir": { ordre: 19, bloc: "EX" },
+    "ex tempete de sable": { ordre: 20, bloc: "EX" },
+    "ex dragon": { ordre: 21, bloc: "EX" },
+    "ex team magma vs team aqua": { ordre: 22, bloc: "EX" },
+    "ex legendes oubliees": { ordre: 23, bloc: "EX" },
+    "ex hidden legends": { ordre: 24, bloc: "EX" },
+    "ex rouge feu & vert feuille": { ordre: 25, bloc: "EX" },
+    "ex rouge feu et vert feuille": { ordre: 26, bloc: "EX" },
+    "ex team rocket returns": { ordre: 27, bloc: "EX" },
+    "ex deoxys": { ordre: 28, bloc: "EX" },
+    "ex emeraude": { ordre: 29, bloc: "EX" },
+    "ex forces cachees": { ordre: 30, bloc: "EX" },
+    "ex especes delta": { ordre: 31, bloc: "EX" },
+    "ex createurs de legendes": { ordre: 32, bloc: "EX" },
+    "ex fantomes holon": { ordre: 33, bloc: "EX" },
+    "ex gardiens de cristal": { ordre: 34, bloc: "EX" },
+    "ex iles des dragons": { ordre: 35, bloc: "EX" },
+    "ex ile des dragons": { ordre: 35, bloc: "EX" },
+    "ex gardiens du pouvoir": { ordre: 36, bloc: "EX" },
+    "promos black star dp": { ordre: 37, bloc: "Diamant et Perle" },
+    "diamant & perle": { ordre: 38, bloc: "Diamant et Perle" },
+    "diamant et perle": { ordre: 39, bloc: "Diamant et Perle" },
+    "tresors mysterieux": { ordre: 40, bloc: "Diamant et Perle" },
+    "merveilles secretes": { ordre: 41, bloc: "Diamant et Perle" },
+    "rencontres au sommet": { ordre: 42, bloc: "Diamant et Perle" },
+    "aube majestueuse": { ordre: 43, bloc: "Diamant et Perle" },
+    "eveil des legendes": { ordre: 44, bloc: "Diamant et Perle" },
+    "tempete": { ordre: 45, bloc: "Diamant et Perle" },
+    "stormfront": { ordre: 46, bloc: "Diamant et Perle" },
+    "platine": { ordre: 47, bloc: "Platine" },
+    "rivaux emergents": { ordre: 48, bloc: "Platine" },
+    "vainqueurs supremes": { ordre: 49, bloc: "Platine" },
+    "arceus": { ordre: 50, bloc: "Platine" },
+    "promos black star heartgold soulsilver": { ordre: 51, bloc: "HeartGold SoulSilver" },
+    "heartgold soulsilver": { ordre: 52, bloc: "HeartGold SoulSilver" },
+    "dechainement": { ordre: 53, bloc: "HeartGold SoulSilver" },
+    "indomptable": { ordre: 54, bloc: "HeartGold SoulSilver" },
+    "triomphe": { ordre: 55, bloc: "HeartGold SoulSilver" },
+    "appel des legendes": { ordre: 56, bloc: "Appel des légendes" },
+    "promos black star noir et blanc": { ordre: 57, bloc: "Noir et Blanc" },
+    "promos black star black&white": { ordre: 58, bloc: "Noir et Blanc" },
+    "noir & blanc": { ordre: 59, bloc: "Noir et Blanc" },
+    "noir et blanc": { ordre: 60, bloc: "Noir et Blanc" },
+    "pouvoirs emergents": { ordre: 61, bloc: "Noir et Blanc" },
+    "nobles victoires": { ordre: 62, bloc: "Noir et Blanc" },
+    "destinees futures": { ordre: 63, bloc: "Noir et Blanc" },
+    "explorateurs obscurs": { ordre: 64, bloc: "Noir et Blanc" },
+    "dragons exaltes": { ordre: 65, bloc: "Noir et Blanc" },
+    "coffre des dragons": { ordre: 66, bloc: "Noir et Blanc" },
+    "frontieres franchies": { ordre: 67, bloc: "Noir et Blanc" },
+    "tempete plasma": { ordre: 68, bloc: "Noir et Blanc" },
+    "glaciation plasma": { ordre: 69, bloc: "Noir et Blanc" },
+    "explosion plasma": { ordre: 70, bloc: "Noir et Blanc" },
+    "tresors legendaires": { ordre: 71, bloc: "Noir et Blanc" },
+    "promotions xy": { ordre: 72, bloc: "XY" },
+    "promo xy": { ordre: 73, bloc: "XY" },
+    "promos x&y": { ordre: 74, bloc: "XY" },
+    "kalos starter set": { ordre: 75, bloc: "XY" },
+    "xy": { ordre: 76, bloc: "XY" },
+    "etincelles": { ordre: 77, bloc: "XY" },
+    "poings furieux": { ordre: 78, bloc: "XY" },
+    "vigueur spectrale": { ordre: 79, bloc: "XY" },
+    "primo-choc": { ordre: 80, bloc: "XY" },
+    "primo choc": { ordre: 81, bloc: "XY" },
+    "double danger": { ordre: 82, bloc: "XY" },
+    "ciel rugissant": { ordre: 83, bloc: "XY" },
+    "origines antiques": { ordre: 84, bloc: "XY" },
+    "impulsion turbo": { ordre: 85, bloc: "XY" },
+    "rupture turbo": { ordre: 86, bloc: "XY" },
+    "generations": { ordre: 87, bloc: "XY" },
+    "impact des destins": { ordre: 88, bloc: "XY" },
+    "offensive vapeur": { ordre: 89, bloc: "XY" },
+    "evolutions": { ordre: 90, bloc: "XY" },
+    "promos soleil et lune": { ordre: 91, bloc: "Soleil et Lune" },
+    "promos sun&moon": { ordre: 92, bloc: "Soleil et Lune" },
+    "soleil et lune": { ordre: 93, bloc: "Soleil et Lune" },
+    "gardiens ascendants": { ordre: 94, bloc: "Soleil et Lune" },
+    "ombres ardentes": { ordre: 95, bloc: "Soleil et Lune" },
+    "legendes brillantes": { ordre: 96, bloc: "Soleil et Lune" },
+    "invasion carmin": { ordre: 97, bloc: "Soleil et Lune" },
+    "ultra-prisme": { ordre: 98, bloc: "Soleil et Lune" },
+    "ultra prisme": { ordre: 99, bloc: "Soleil et Lune" },
+    "lumiere interdite": { ordre: 100, bloc: "Soleil et Lune" },
+    "tempete celeste": { ordre: 101, bloc: "Soleil et Lune" },
+    "majeste des dragons": { ordre: 102, bloc: "Soleil et Lune" },
+    "tonnerre perdu": { ordre: 103, bloc: "Soleil et Lune" },
+    "duo de choc": { ordre: 104, bloc: "Soleil et Lune" },
+    "alliance infaillible": { ordre: 105, bloc: "Soleil et Lune" },
+    "harmonie des esprits": { ordre: 106, bloc: "Soleil et Lune" },
+    "destinees occultes": { ordre: 107, bloc: "Soleil et Lune" },
+    "eclipse cosmique": { ordre: 108, bloc: "Soleil et Lune" },
+    "promos epee et bouclier": { ordre: 109, bloc: "Épée et Bouclier" },
+    "promos sword&shield": { ordre: 110, bloc: "Épée et Bouclier" },
+    "epee et bouclier": { ordre: 111, bloc: "Épée et Bouclier" },
+    "clash des rebelles": { ordre: 112, bloc: "Épée et Bouclier" },
+    "tenebres embrasees": { ordre: 113, bloc: "Épée et Bouclier" },
+    "la voie du maitre": { ordre: 114, bloc: "Épée et Bouclier" },
+    "voltage eclatant": { ordre: 115, bloc: "Épée et Bouclier" },
+    "destinees radieuses": { ordre: 116, bloc: "Épée et Bouclier" },
+    "styles de combat": { ordre: 117, bloc: "Épée et Bouclier" },
+    "regne de glace": { ordre: 118, bloc: "Épée et Bouclier" },
+    "evolution celeste": { ordre: 119, bloc: "Épée et Bouclier" },
+    "celebrations": { ordre: 120, bloc: "Épée et Bouclier" },
+    "poing de fusion": { ordre: 121, bloc: "Épée et Bouclier" },
+    "stars etincelantes": { ordre: 122, bloc: "Épée et Bouclier" },
+    "astres radieux": { ordre: 123, bloc: "Épée et Bouclier" },
+    "pokemon go": { ordre: 124, bloc: "Épée et Bouclier" },
+    "origine perdue": { ordre: 125, bloc: "Épée et Bouclier" },
+    "tempete argentee": { ordre: 126, bloc: "Épée et Bouclier" },
+    "zenith supreme": { ordre: 127, bloc: "Épée et Bouclier" },
+    "svp black star promos": { ordre: 128, bloc: "Écarlate et Violet" },
+    "promotions svp black star": { ordre: 129, bloc: "Écarlate et Violet" },
+    "promo svp black star": { ordre: 130, bloc: "Écarlate et Violet" },
+    "promos ecarlate et violet": { ordre: 131, bloc: "Écarlate et Violet" },
+    "energies ecarlate et violet": { ordre: 132, bloc: "Écarlate et Violet" },
+    "ecarlate et violet": { ordre: 133, bloc: "Écarlate et Violet" },
+    "evolutions a paldea": { ordre: 134, bloc: "Écarlate et Violet" },
+    "flammes obsidiennes": { ordre: 135, bloc: "Écarlate et Violet" },
+    "151": { ordre: 136, bloc: "Écarlate et Violet" },
+    "faille paradoxe": { ordre: 137, bloc: "Écarlate et Violet" },
+    "destinees de paldea": { ordre: 138, bloc: "Écarlate et Violet" },
+    "forces temporelles": { ordre: 139, bloc: "Écarlate et Violet" },
+    "mascarade crepusculaire": { ordre: 140, bloc: "Écarlate et Violet" },
+    "fable nebuleuse": { ordre: 141, bloc: "Écarlate et Violet" },
+    "couronne stellaire": { ordre: 142, bloc: "Écarlate et Violet" },
+    "etincelles deferlantes": { ordre: 143, bloc: "Écarlate et Violet" },
+    "evolutions prismatiques": { ordre: 144, bloc: "Écarlate et Violet" },
+    "aventures ensemble": { ordre: 145, bloc: "Écarlate et Violet" },
+    "rivalites destinees": { ordre: 146, bloc: "Écarlate et Violet" },
+    "foudre noire": { ordre: 147, bloc: "Écarlate et Violet" },
+    "flamme blanche": { ordre: 148, bloc: "Écarlate et Violet" },
+    "promos mega-evolution": { ordre: 149, bloc: "Méga-Évolution" },
+    "promos mega evolution": { ordre: 150, bloc: "Méga-Évolution" },
+    "energies mega-evolution": { ordre: 151, bloc: "Méga-Évolution" },
+    "energies mega evolution": { ordre: 152, bloc: "Méga-Évolution" },
+    "mega-evolution": { ordre: 153, bloc: "Méga-Évolution" },
+    "mega evolution": { ordre: 154, bloc: "Méga-Évolution" },
+    "flammes fantasmagoriques": { ordre: 155, bloc: "Méga-Évolution" },
+    "heros transcendants": { ordre: 156, bloc: "Méga-Évolution" },
+    "equilibre parfait": { ordre: 157, bloc: "Méga-Évolution" },
+    "chaos ascendant": { ordre: 158, bloc: "Méga-Évolution" },
+    "nuit noire": { ordre: 159, bloc: "Méga-Évolution" },
+  };
 
-    if (ordreChronologiqueEditions[nomNormalise] !== undefined) {
-      return ordreChronologiqueEditions[nomNormalise];
+  const stylesBlocs: Record<
+    string,
+    {
+      nom: string;
+      logo: string;
+      fond: string;
+      bordure: string;
+      texte: string;
     }
-
-    const correspondance = Object.entries(ordreChronologiqueEditions)
-      .filter(([nomConnu]) => nomNormalise.includes(nomConnu))
-      .sort((a, b) => b[0].length - a[0].length)[0];
-
-    return correspondance?.[1] ?? 999999;
-  }
-
-  function informationsBlocEdition(nomEdition: string) {
-    const rang = rangChronologiqueEdition(nomEdition);
-    const annee = Math.floor(rang / 100);
-
-    if (annee >= 2023) {
-      return {
-        nom: "Écarlate et Violet",
-        logo: "https://assets.tcgdex.net/en/sv/sv01/logo.webp",
-        fond: "from-red-950/55 via-violet-950/35 to-slate-900",
-        bordure: "border-violet-400/35",
-        texte: "text-violet-200",
-      };
-    }
-
-    if (annee >= 2020) {
-      return {
-        nom: "Épée et Bouclier",
-        logo: "https://assets.tcgdex.net/en/swsh/swsh1/logo.webp",
-        fond: "from-blue-950/55 via-pink-950/25 to-slate-900",
-        bordure: "border-blue-400/35",
-        texte: "text-blue-200",
-      };
-    }
-
-    if (annee >= 2017) {
-      return {
-        nom: "Soleil et Lune",
-        logo: "https://assets.tcgdex.net/en/sm/sm1/logo.webp",
-        fond: "from-yellow-950/45 via-purple-950/30 to-slate-900",
-        bordure: "border-yellow-400/35",
-        texte: "text-yellow-200",
-      };
-    }
-
-    if (annee >= 2014) {
-      return {
-        nom: "XY",
-        logo: "https://assets.tcgdex.net/en/xy/xy1/logo.webp",
-        fond: "from-blue-950/50 via-red-950/25 to-slate-900",
-        bordure: "border-cyan-400/35",
-        texte: "text-cyan-200",
-      };
-    }
-
-    if (annee >= 2011) {
-      return {
-        nom: "Noir et Blanc",
-        logo: "https://assets.tcgdex.net/en/bw/bw1/logo.webp",
-        fond: "from-slate-700/55 via-slate-950 to-slate-900",
-        bordure: "border-slate-300/35",
-        texte: "text-slate-200",
-      };
-    }
-
-    if (annee >= 2007) {
-      return {
-        nom: "Diamant et Perle",
-        logo: "https://assets.tcgdex.net/en/dp/dp1/logo.webp",
-        fond: "from-cyan-950/45 via-violet-950/25 to-slate-900",
-        bordure: "border-cyan-300/35",
-        texte: "text-cyan-100",
-      };
-    }
-
-    if (annee >= 2003) {
-      return {
-        nom: "EX",
-        logo: "https://assets.tcgdex.net/en/ex/ex1/logo.webp",
-        fond: "from-orange-950/45 via-red-950/20 to-slate-900",
-        bordure: "border-orange-400/35",
-        texte: "text-orange-200",
-      };
-    }
-
-    return {
-      nom: "Wizards / Classique",
-      logo: "https://assets.tcgdex.net/en/base/base1/logo.webp",
+  > = {
+    Wizards: {
+      nom: "Wizards",
+      logo: "",
       fond: "from-yellow-950/40 via-blue-950/25 to-slate-900",
       bordure: "border-yellow-300/35",
       texte: "text-yellow-100",
+    },
+    EX: {
+      nom: "EX",
+      logo: "",
+      fond: "from-orange-950/45 via-red-950/20 to-slate-900",
+      bordure: "border-orange-400/35",
+      texte: "text-orange-200",
+    },
+    "Diamant et Perle": {
+      nom: "Diamant et Perle",
+      logo: "",
+      fond: "from-cyan-950/45 via-violet-950/25 to-slate-900",
+      bordure: "border-cyan-300/35",
+      texte: "text-cyan-100",
+    },
+    Platine: {
+      nom: "Platine",
+      logo: "",
+      fond: "from-slate-700/50 via-violet-950/20 to-slate-900",
+      bordure: "border-slate-300/35",
+      texte: "text-slate-200",
+    },
+    "HeartGold SoulSilver": {
+      nom: "HeartGold SoulSilver",
+      logo: "",
+      fond: "from-amber-950/40 via-slate-950 to-slate-900",
+      bordure: "border-amber-300/35",
+      texte: "text-amber-100",
+    },
+    "Appel des légendes": {
+      nom: "Appel des légendes",
+      logo: "",
+      fond: "from-slate-800 via-yellow-950/20 to-slate-900",
+      bordure: "border-yellow-200/30",
+      texte: "text-yellow-100",
+    },
+    "Noir et Blanc": {
+      nom: "Noir et Blanc",
+      logo: "",
+      fond: "from-slate-700/55 via-slate-950 to-slate-900",
+      bordure: "border-slate-300/35",
+      texte: "text-slate-200",
+    },
+    XY: {
+      nom: "XY",
+      logo: "",
+      fond: "from-blue-950/50 via-red-950/25 to-slate-900",
+      bordure: "border-cyan-400/35",
+      texte: "text-cyan-200",
+    },
+    "Soleil et Lune": {
+      nom: "Soleil et Lune",
+      logo: "",
+      fond: "from-yellow-950/45 via-purple-950/30 to-slate-900",
+      bordure: "border-yellow-400/35",
+      texte: "text-yellow-200",
+    },
+    "Épée et Bouclier": {
+      nom: "Épée et Bouclier",
+      logo: "",
+      fond: "from-blue-950/55 via-pink-950/25 to-slate-900",
+      bordure: "border-blue-400/35",
+      texte: "text-blue-200",
+    },
+    "Écarlate et Violet": {
+      nom: "Écarlate et Violet",
+      logo: "",
+      fond: "from-red-950/55 via-violet-950/35 to-slate-900",
+      bordure: "border-violet-400/35",
+      texte: "text-violet-200",
+    },
+    "Méga-Évolution": {
+      nom: "Méga-Évolution",
+      logo: "",
+      fond: "from-fuchsia-950/45 via-cyan-950/25 to-slate-900",
+      bordure: "border-fuchsia-400/35",
+      texte: "text-fuchsia-200",
+    },
+  };
+
+  function trouverMetaEdition(nomEdition: string): MetaEdition | null {
+    const nomNormalise = normaliserNomEdition(nomEdition);
+
+    if (metaEditions[nomNormalise]) {
+      return metaEditions[nomNormalise];
+    }
+
+    // Tolère des noms un peu plus longs provenant d'une API.
+    const correspondance = Object.entries(metaEditions)
+      .filter(([nomConnu]) =>
+        nomNormalise === nomConnu ||
+        nomNormalise.includes(nomConnu) ||
+        nomConnu.includes(nomNormalise)
+      )
+      .sort((a, b) => b[0].length - a[0].length)[0];
+
+    return correspondance?.[1] ?? null;
+  }
+
+  function rangChronologiqueEdition(nomEdition: string) {
+    const nomNormalise = normaliserNomEdition(nomEdition);
+    const meta = trouverMetaEdition(nomEdition);
+
+    if (meta) {
+      return meta.ordre;
+    }
+
+    // Sécurité : toute édition qui commence par "EX" reste dans le bloc EX
+    // même si son nom exact n'est pas encore dans la table.
+    if (nomNormalise.startsWith("ex ")) {
+      const ordresEX = Object.values(metaEditions)
+        .filter((edition) => edition.bloc === "EX")
+        .map((edition) => edition.ordre);
+
+      return Math.max(...ordresEX) + 0.5;
+    }
+
+    return 999999;
+  }
+
+  function informationsBlocEdition(nomEdition: string) {
+    const nomNormalise = normaliserNomEdition(nomEdition);
+    const meta = trouverMetaEdition(nomEdition);
+
+    if (meta && stylesBlocs[meta.bloc]) {
+      return stylesBlocs[meta.bloc];
+    }
+
+    // Sécurités pour les noms non encore connus.
+    if (nomNormalise.startsWith("ex ")) {
+      return stylesBlocs.EX;
+    }
+
+    if (
+      nomNormalise.startsWith("svp") ||
+      nomNormalise.includes("ecarlate") ||
+      nomNormalise.includes("paldea")
+    ) {
+      return stylesBlocs["Écarlate et Violet"];
+    }
+
+    return {
+      nom: "Autres",
+      logo: "",
+      fond: "from-slate-800 via-slate-900 to-slate-950",
+      bordure: "border-slate-500/35",
+      texte: "text-slate-200",
     };
   }
 
@@ -1030,13 +1216,18 @@ const nombrePokemon = cartesCollection.length - nombreDresseurs - nombreEnergies
       return groupes;
     }, {})
   ).sort(([editionA], [editionB]) => {
-    const difference =
-      rangChronologiqueEdition(editionA) -
-      rangChronologiqueEdition(editionB);
+    const rangA = rangChronologiqueEdition(editionA);
+    const rangB = rangChronologiqueEdition(editionB);
 
-    if (difference !== 0) return difference;
+    // De la plus vieille édition à la plus récente.
+    if (rangA !== rangB) {
+      return rangA - rangB;
+    }
 
-    return editionA.localeCompare(editionB, "fr");
+    return editionA.localeCompare(editionB, "fr", {
+      numeric: true,
+      sensitivity: "base",
+    });
   });
 
   useEffect(() => {
@@ -1486,7 +1677,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
 
         <p className="mt-5 text-4xl font-black text-white">
           {(cartesCollection.length > 0
-            ? valeurCollection / cartesCollection.length
+            ? valeurCollection / cartes.length
             : 0
           ).toLocaleString("fr-FR", {
             minimumFractionDigits: 2,
@@ -3325,15 +3516,40 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                     const blocEdition =
                       informationsBlocEdition(nomEdition);
 
+                    const blocPrecedent =
+                      indexEdition > 0
+                        ? informationsBlocEdition(
+                            cartesParEdition[indexEdition - 1][0]
+                          ).nom
+                        : null;
+
+                    const nouveauBloc =
+                      blocPrecedent !== blocEdition.nom;
+
                     return (
-                      <article
+                      <div
                         key={nomEdition}
-                        className={`overflow-hidden rounded-2xl border bg-gradient-to-br transition duration-300 ${blocEdition.fond} ${
-                          editionOuverte
-                            ? `${blocEdition.bordure} shadow-xl`
-                            : "border-slate-700/80 opacity-90 hover:opacity-100"
-                        }`}
+                        className="space-y-4"
                       >
+                        {nouveauBloc && (
+                          <div className="mt-8 rounded-2xl border border-slate-600/70 bg-slate-950/70 px-5 py-4 shadow-xl">
+                            <p className="text-xs font-bold uppercase tracking-[0.22em] text-slate-400">
+                              Bloc
+                            </p>
+
+                            <h3 className={`mt-1 text-2xl font-black sm:text-3xl ${blocEdition.texte}`}>
+                              {blocEdition.nom}
+                            </h3>
+                          </div>
+                        )}
+
+                        <article
+                          className={`overflow-hidden rounded-2xl border bg-gradient-to-br transition duration-300 ${blocEdition.fond} ${
+                            editionOuverte
+                              ? `${blocEdition.bordure} shadow-xl`
+                              : "border-slate-700/80 opacity-90 hover:opacity-100"
+                          }`}
+                        >
                         <button
                           type="button"
                           onClick={() =>
@@ -3355,18 +3571,6 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
 
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                <div className="flex h-16 w-32 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/90 p-2 shadow-lg">
-                                  <img
-                                    src={blocEdition.logo}
-                                    alt={`Logo ${blocEdition.nom}`}
-                                    className="max-h-12 max-w-full object-contain"
-                                    onError={(evenement) => {
-                                      evenement.currentTarget.style.display =
-                                        "none";
-                                    }}
-                                  />
-                                </div>
-
                                 <div className="min-w-0">
                                   <p
                                     className={`text-xs font-bold uppercase tracking-[0.18em] ${blocEdition.texte}`}
@@ -3515,7 +3719,8 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                             </div>
                           </div>
                         )}
-                      </article>
+                        </article>
+                      </div>
                     );
                   }
                 )}
