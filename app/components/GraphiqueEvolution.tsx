@@ -77,34 +77,21 @@ function prixCarteALaDate(
   const finJour = new Date(date);
   finJour.setHours(23, 59, 59, 999);
 
-  const lignesCarte = historiquePrix
-    .filter((ligne) => ligne.carte_id === carte.identifiant)
+  const lignes = historiquePrix
+    .filter(
+      (ligne) =>
+        ligne.carte_id === carte.identifiant &&
+        new Date(ligne.date_releve).getTime() <= finJour.getTime()
+    )
     .sort(
       (a, b) =>
         new Date(a.date_releve).getTime() -
         new Date(b.date_releve).getTime()
     );
 
-  if (lignesCarte.length === 0) {
-    return Number(carte.prix) || 0;
-  }
-
-  const lignesAvantOuPendantLaDate = lignesCarte.filter(
-    (ligne) =>
-      new Date(ligne.date_releve).getTime() <= finJour.getTime()
-  );
-
-  if (lignesAvantOuPendantLaDate.length > 0) {
-    return (
-      Number(
-        lignesAvantOuPendantLaDate[
-          lignesAvantOuPendantLaDate.length - 1
-        ].prix
-      ) || 0
-    );
-  }
-
-  return Number(lignesCarte[0].prix) || Number(carte.prix) || 0;
+  return lignes.length > 0
+    ? Number(lignes[lignes.length - 1].prix) || 0
+    : Number(carte.prix) || 0;
 }
 
 function creerPoints(
@@ -112,26 +99,37 @@ function creerPoints(
   historiquePrix: HistoriquePrix[],
   periode: Periode
 ): Point[] {
-  return obtenirDates(periode).map((date) => ({
-    date: date.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-    }),
-    dateComplete: date.toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }),
-    valeur: Number(
-      cartes
-        .reduce(
+  const dates = obtenirDates(periode);
+  const aujourdHui = debutJour(new Date());
+
+  return dates.map((date) => {
+    const estAujourdhui =
+      debutJour(date).getTime() === aujourdHui.getTime();
+
+    const valeur = estAujourdhui
+      ? cartes.reduce(
+          (total, carte) => total + (Number(carte.prix) || 0),
+          0
+        )
+      : cartes.reduce(
           (total, carte) =>
             total + prixCarteALaDate(carte, date, historiquePrix),
           0
-        )
-        .toFixed(2)
-    ),
-  }));
+        );
+
+    return {
+      date: date.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+      }),
+      dateComplete: date.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+      valeur: Number(valeur.toFixed(2)),
+    };
+  });
 }
 
 export default function GraphiqueEvolution({
@@ -294,12 +292,7 @@ export default function GraphiqueEvolution({
                 <YAxis
                   stroke="#94a3b8"
                   width={75}
-                  domain={[
-                    (minimum: number) =>
-                      Math.max(0, Math.floor((minimum - 0.05) * 100) / 100),
-                    (maximum: number) =>
-                      Math.ceil((maximum + 0.05) * 100) / 100,
-                  ]}
+                  domain={["auto", "auto"]}
                   tickFormatter={(valeur) => `${Number(valeur).toFixed(2)} €`}
                   axisLine={false}
                   tickLine={false}
