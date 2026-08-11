@@ -160,6 +160,11 @@ export default function GraphiqueEvolution({
         ? `Évolution de l’édition ${edition}`
         : `Évolution du prix de ${cartesDuGraphique[0]?.nom ?? "la carte"}`;
 
+  const nombreExemplairesGraphique = cartesDuGraphique.reduce(
+    (total, carte) => total + (carte.quantite ?? 1),
+    0
+  );
+
   const donnees = useMemo(
     () => creerPoints(cartesDuGraphique, historiquePrix, periode),
     [cartesDuGraphique, historiquePrix, periode]
@@ -186,8 +191,8 @@ export default function GraphiqueEvolution({
             </h2>
 
             <p className="mt-2 text-sm text-slate-400">
-              {cartesDuGraphique.length} carte
-              {cartesDuGraphique.length > 1 ? "s" : ""} dans ce graphique
+              {nombreExemplairesGraphique} carte
+              {nombreExemplairesGraphique > 1 ? "s" : ""} dans ce graphique
             </p>
           </div>
 

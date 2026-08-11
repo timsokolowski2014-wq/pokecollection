@@ -8,7 +8,7 @@ type PokemonCardProps = {
   prix: number;
   quantite?: number;
   image: string;
-  historique?: { prix: number; date: string }[];
+  historique?: { prix: number; date?: string; date_releve?: string }[];
   selectionnee?: boolean;
   onSelectionner?: () => void;
   onVoirGraphique?: () => void;
@@ -268,7 +268,15 @@ export default function PokemonCard({
           </p>
 
           {quantite > 1 && (
-            <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-black text-amber-200">
+            <div
+              className={`mt-4 inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-black ${
+                quantite === 2
+                  ? "border-amber-400/50 bg-amber-400/10 text-amber-200"
+                  : quantite === 3
+                    ? "border-violet-400/50 bg-violet-400/10 text-violet-200"
+                    : "border-rose-400/50 bg-rose-400/10 text-rose-200"
+              }`}
+            >
               <span>×{quantite}</span>
               <span>
                 {quantite === 2

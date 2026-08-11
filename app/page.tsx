@@ -59,7 +59,7 @@ export default function Home() {
   const [carteAgrandie, setCarteAgrandie] = useState<Carte | null>(null);
   const [editionsOuvertes, setEditionsOuvertes] = useState<string[]>([]);
   const [modeCollection, setModeCollection] = useState<
-    "cartes" | "editions" | "favoris" | "dresseurs" | "energies" | "pokemons"
+    "cartes" | "editions" | "favoris" | "dresseurs" | "energies" | "pokemons" | "doubles"
   >("cartes");
 
   const [graphiqueAffiche, setGraphiqueAffiche] = useState<
@@ -1352,6 +1352,15 @@ const nombreEnergies = cartesCollection
 const nombrePokemon =
   nombreExemplairesCollection - nombreDresseurs - nombreEnergies;
 
+const cartesEnDoubleOuPlus = cartesCollection.filter(
+  (carte) => (carte.quantite ?? 1) > 1
+);
+
+const nombreExemplairesEnDoubleOuPlus = cartesEnDoubleOuPlus.reduce(
+  (total, carte) => total + (carte.quantite ?? 1),
+  0
+);
+
   const cartesParEdition = Object.entries(
     cartesFiltrees.reduce<Record<string, Carte[]>>((groupes, carte) => {
       const nomEdition = carte.edition || "Sans édition";
@@ -2494,8 +2503,8 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
           };
 
           const pourcentage =
-            cartesCollection.length > 0
-              ? (statistiques.nombre / cartesCollection.length) * 100
+            nombreExemplairesCollection > 0
+              ? (statistiques.nombre / nombreExemplairesCollection) * 100
               : 0;
 
           return (
@@ -2610,8 +2619,8 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
               : 0;
 
           const pourcentage =
-            cartesCollection.length > 0
-              ? (statistiques.nombre / cartesCollection.length) * 100
+            nombreExemplairesCollection > 0
+              ? (statistiques.nombre / nombreExemplairesCollection) * 100
               : 0;
 
           const couleurs = [
@@ -3176,6 +3185,18 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
           >
             ⚡ Mes Pokémon
           </button>
+
+          <button
+            type="button"
+            onClick={() => setModeCollection("doubles")}
+            className={`min-w-44 flex-1 rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
+              modeCollection === "doubles"
+                ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-950/40"
+                : "text-slate-300 hover:bg-slate-800 hover:text-amber-300"
+            }`}
+          >
+            🃏 Cartes en doubles
+          </button>
         </div>
       </section>
 
@@ -3440,6 +3461,76 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
             </div>
           )}
           </div>
+        </section>
+      )}
+
+      {modeCollection === "doubles" && (
+        <section className="relative mt-10 overflow-hidden rounded-3xl border border-amber-400/30 bg-gradient-to-br from-amber-950/70 via-slate-950 to-orange-950/30 p-4 shadow-2xl shadow-amber-950/30 sm:p-6">
+          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.22em] text-amber-300">
+                Exemplaires multiples
+              </p>
+              <h2 className="mt-2 text-3xl font-black text-white">
+                🃏 Cartes en doubles, triples et plus
+              </h2>
+            </div>
+
+            <p className="text-sm font-semibold text-slate-400">
+              {cartesEnDoubleOuPlus.length} carte
+              {cartesEnDoubleOuPlus.length > 1 ? "s" : ""} différente
+              {cartesEnDoubleOuPlus.length > 1 ? "s" : ""} ·{" "}
+              {nombreExemplairesEnDoubleOuPlus} exemplaires
+            </p>
+          </div>
+
+          {cartesEnDoubleOuPlus.length === 0 ? (
+            <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-8 text-center text-slate-400">
+              Tu n’as aucune carte en double pour le moment.
+            </div>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {cartesEnDoubleOuPlus.map((carte) => {
+                const historiqueCarte = historiquePrix.filter(
+                  (ligne) => ligne.carte_id === carte.identifiant
+                );
+
+                return (
+                  <PokemonCard
+                    key={carte.identifiant}
+                    nom={carte.nom}
+                    edition={carte.edition}
+                    type={carte.type}
+                    etat={carte.etat}
+                    prix={carte.prix}
+                    quantite={carte.quantite}
+                    image={carte.image}
+                    historique={historiqueCarte}
+                    selectionnee={cartesSelectionnees.includes(
+                      carte.identifiant
+                    )}
+                    onSelectionner={() =>
+                      selectionnerCarte(carte.identifiant)
+                    }
+                    onVoirGraphique={() =>
+                      ouvrirGraphiqueCarte(carte.identifiant)
+                    }
+                    onModifier={() =>
+                      modifierCarteDirectement(carte.identifiant)
+                    }
+                    onSupprimer={() =>
+                      supprimerUneCarte(carte.identifiant)
+                    }
+                    favori={favoris.includes(carte.identifiant)}
+                    onFavori={() =>
+                      basculerFavori(carte.identifiant)
+                    }
+                    onAgrandir={() => setCarteAgrandie(carte)}
+                  />
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 
