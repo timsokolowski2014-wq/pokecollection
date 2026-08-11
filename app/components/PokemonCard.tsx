@@ -6,6 +6,7 @@ type PokemonCardProps = {
   type: string;
   etat: string;
   prix: number;
+  quantite?: number;
   image: string;
   historique?: { prix: number; date: string }[];
   selectionnee?: boolean;
@@ -154,20 +155,6 @@ const couleursTypes: Record<
     bordure: "border-white/20",
     lueur: "group-hover:shadow-black/40",
   },
-  Dresseur: {
-    fond: "bg-orange-500/20",
-    texte: "text-orange-100",
-    emoji: "🧑‍🏫",
-    bordure: "border-orange-400/40",
-    lueur: "group-hover:shadow-orange-950/40",
-  },
-  Énergie: {
-    fond: "bg-cyan-400/20",
-    texte: "text-cyan-100",
-    emoji: "⚪",
-    bordure: "border-cyan-300/40",
-    lueur: "group-hover:shadow-cyan-950/40",
-  },
 };
 
 export default function PokemonCard({
@@ -176,6 +163,7 @@ export default function PokemonCard({
   type,
   etat,
   prix,
+  quantite = 1,
   image,
   selectionnee = false,
   onSelectionner,
@@ -186,13 +174,7 @@ export default function PokemonCard({
   favori = false,
   onFavori,
 }: PokemonCardProps) {
-  const typeDeBase = type.startsWith("Dresseur")
-    ? "Dresseur"
-    : type.startsWith("Énergie")
-      ? "Énergie"
-      : type;
-
-  const couleur = couleursTypes[typeDeBase] ?? {
+  const couleur = couleursTypes[type] ?? {
     fond: "bg-slate-500/20",
     texte: "text-slate-200",
     emoji: "❔",
@@ -258,11 +240,7 @@ export default function PokemonCard({
       <div className="relative z-10 grid flex-1 gap-5 sm:grid-cols-[1fr_auto]">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-            {typeDeBase === "Dresseur"
-              ? "Carte Dresseur"
-              : typeDeBase === "Énergie"
-                ? "Carte Énergie"
-                : "Carte Pokémon"}
+            Carte Pokémon
           </p>
 
           <h3 className="mt-2 text-xl font-black leading-tight text-white sm:text-3xl">
@@ -288,6 +266,19 @@ export default function PokemonCard({
             })}{" "}
             €
           </p>
+
+          {quantite > 1 && (
+            <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-black text-amber-200">
+              <span>×{quantite}</span>
+              <span>
+                {quantite === 2
+                  ? "Carte en double"
+                  : quantite === 3
+                    ? "Carte en triple"
+                    : `${quantite} exemplaires`}
+              </span>
+            </div>
+          )}
 
           <span
             className={`mt-5 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-bold ${couleur.fond} ${couleur.texte} ${couleur.bordure}`}

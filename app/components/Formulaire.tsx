@@ -20,6 +20,8 @@ type FormulaireProps = {
   idApi: string;
   setIdApi: (valeur: string) => void;
   proprietaire: "Timothée" | "Valentin";
+  quantite: string;
+  setQuantite: (valeur: string) => void;
   setProprietaire: (valeur: "Timothée" | "Valentin") => void;
   onEnregistrer: () => void;
 };
@@ -89,6 +91,8 @@ export default function Formulaire({
   setIdApi,
   proprietaire,
   setProprietaire,
+  quantite,
+  setQuantite,
   onEnregistrer,
 }: FormulaireProps) {
   const [resultats, setResultats] = useState<CarteRecherche[]>([]);
@@ -304,6 +308,8 @@ export default function Formulaire({
     !edition.trim() ||
     !etat ||
     !prix ||
+    !quantite ||
+    Number(quantite) < 1 ||
     !image;
 
   return (
@@ -556,6 +562,21 @@ export default function Formulaire({
             placeholder="Ex : 25,50"
             className={classeChamp}
           />
+        </label>
+
+        <label className="block text-lg font-bold text-white">
+          📦 Quantité
+          <input
+            type="number"
+            min="1"
+            step="1"
+            value={quantite}
+            onChange={(e) => setQuantite(e.target.value)}
+            className={classeChamp}
+          />
+          <span className="mt-2 block text-sm font-normal text-gray-400">
+            Ex : 2 si tu as cette carte en double, 3 si tu l’as en triple.
+          </span>
         </label>
 
         {image ? (

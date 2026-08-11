@@ -16,6 +16,7 @@ type Carte = {
   nom: string;
   edition: string;
   prix: number;
+  quantite?: number;
 };
 
 type HistoriquePrix = {
@@ -90,8 +91,8 @@ function prixCarteALaDate(
     );
 
   return lignes.length > 0
-    ? Number(lignes[lignes.length - 1].prix) || 0
-    : Number(carte.prix) || 0;
+    ? (Number(lignes[lignes.length - 1].prix) || 0) * (carte.quantite ?? 1)
+    : (Number(carte.prix) || 0) * (carte.quantite ?? 1);
 }
 
 function creerPoints(
@@ -108,7 +109,7 @@ function creerPoints(
 
     const valeur = estAujourdhui
       ? cartes.reduce(
-          (total, carte) => total + (Number(carte.prix) || 0),
+          (total, carte) => total + (Number(carte.prix) || 0) * (carte.quantite ?? 1),
           0
         )
       : cartes.reduce(

@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -22,6 +20,7 @@ type Carte = {
   idApi: string;
   miseAJourAuto: boolean;
   proprietaire: "Timothée" | "Valentin";
+  quantite: number;
 };
 
 type HistoriquePrix = {
@@ -43,6 +42,7 @@ export default function Home() {
   const [prix, setPrix] = useState("");
   const [image, setImage] = useState("");
   const [idApi, setIdApi] = useState("");
+  const [quantite, setQuantite] = useState("1");
   const [proprietaireCarte, setProprietaireCarte] = useState<
     "Timothée" | "Valentin"
   >("Timothée");
@@ -80,13 +80,13 @@ const cartesCollection = cartes.filter(
   (carte) => carte.proprietaire === collectionActive
 );
 
-const nombreCartesTimothee = cartes.filter(
-  (carte) => carte.proprietaire === "Timothée"
-).length;
+const nombreCartesTimothee = cartes
+  .filter((carte) => carte.proprietaire === "Timothée")
+  .reduce((total, carte) => total + (carte.quantite ?? 1), 0);
 
-const nombreCartesValentin = cartes.filter(
-  (carte) => carte.proprietaire === "Valentin"
-).length;
+const nombreCartesValentin = cartes
+  .filter((carte) => carte.proprietaire === "Valentin")
+  .reduce((total, carte) => total + (carte.quantite ?? 1), 0);
 
    const statistiquesParEdition = cartesCollection.reduce<
   Record<string, { nombre: number; valeur: number }>
@@ -101,8 +101,9 @@ const nombreCartesValentin = cartes.filter(
     };
   }
 
-  statistiques[edition].nombre += 1;
-  statistiques[edition].valeur += prix;
+  const quantiteCarte = carte.quantite ?? 1;
+  statistiques[edition].nombre += quantiteCarte;
+  statistiques[edition].valeur += prix * quantiteCarte;
 
   return statistiques;
 }, {});
@@ -172,6 +173,7 @@ const nombreCartesValentin = cartes.filter(
         miseAJourAuto: carte.mise_a_jour_auto ?? true,
         proprietaire:
           carte.proprietaire === "Valentin" ? "Valentin" : "Timothée",
+        quantite: Math.max(1, Number(carte.quantite) || 1),
       }));
 
       setCartes(cartesChargees);
@@ -215,9 +217,80 @@ const nombreCartesValentin = cartes.filter(
     }
 
     const prixNumerique = Number(prix);
+    const quantiteNumerique = Number(quantite);
 
     if (Number.isNaN(prixNumerique) || prixNumerique < 0) {
       alert("Le prix n'est pas valide.");
+      return;
+    }
+
+    if (
+      !Number.isInteger(quantiteNumerique) ||
+      quantiteNumerique < 1
+    ) {
+      alert("La quantité doit être un nombre entier d'au moins 1.");
+      return;
+    }
+
+    const nomNettoye = nom.trim().toLowerCase();
+    const editionNettoyee = edition.trim().toLowerCase();
+    const numeroNettoye = numero.trim().toLowerCase();
+    const idApiNettoye = idApi.trim().toLowerCase();
+    const etatNettoye = etat.trim().toLowerCase();
+
+    const carteExistante = cartes.find((carte) => {
+      if (carte.proprietaire !== proprietaireCarte) return false;
+      if (carte.etat.trim().toLowerCase() !== etatNettoye) return false;
+
+      const memeIdApi =
+        idApiNettoye !== "" &&
+        carte.idApi.trim().toLowerCase() === idApiNettoye;
+
+      const memeCarteManuelle =
+        carte.nom.trim().toLowerCase() === nomNettoye &&
+        carte.edition.trim().toLowerCase() === editionNettoyee &&
+        carte.numero.trim().toLowerCase() === numeroNettoye;
+
+      return memeIdApi || memeCarteManuelle;
+    });
+
+    if (carteExistante) {
+      const nouvelleQuantite =
+        (carteExistante.quantite ?? 1) + quantiteNumerique;
+
+      const { error } = await supabase
+        .from("cartes")
+        .update({ quantite: nouvelleQuantite })
+        .eq("id", carteExistante.identifiant);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      setCartes((anciennesCartes) =>
+        anciennesCartes.map((carte) =>
+          carte.identifiant === carteExistante.identifiant
+            ? { ...carte, quantite: nouvelleQuantite }
+            : carte
+        )
+      );
+
+      setMessageNotification(
+        `${carteExistante.nom} est maintenant en ×${nouvelleQuantite}.`
+      );
+      setNotificationVisible(true);
+      setTimeout(() => setNotificationVisible(false), 3000);
+
+      setNom("");
+      setEdition("");
+      setNumero("");
+      setType("");
+      setEtat("");
+      setPrix("");
+      setImage("");
+      setIdApi("");
+      setQuantite("1");
       return;
     }
 
@@ -234,6 +307,7 @@ const nombreCartesValentin = cartes.filter(
         id_api: idApi.trim(),
         mise_a_jour_auto: true,
         proprietaire: proprietaireCarte,
+        quantite: quantiteNumerique,
       })
       .select()
       .single();
@@ -255,13 +329,12 @@ const nombreCartesValentin = cartes.filter(
       idApi: data.id_api ?? "",
       miseAJourAuto: data.mise_a_jour_auto ?? true,
       proprietaire:
-        data.proprietaire === "Valentin" ? "Valentin" : proprietaireCarte,
+        data.proprietaire === "Valentin" ? "Valentin" : "Timothée",
+      quantite: Math.max(1, Number(data.quantite) || 1),
     };
 
     setCartes((anciennesCartes) => [...anciennesCartes, nouvelleCarte]);
 
-    // Enregistre le prix de départ afin que l'évolution puisse être calculée
-    // dès qu'un futur prix change.
     const { data: historiqueInitial, error: erreurHistoriqueInitial } =
       await supabase
         .from("historique_prix")
@@ -291,14 +364,10 @@ const nombreCartesValentin = cartes.filter(
     }
 
     setMessageNotification(
-  `${nouvelleCarte.nom} a bien été ajoutée à ta collection.`
-);
-
-setNotificationVisible(true);
-
-window.setTimeout(() => {
-  setNotificationVisible(false);
-}, 3500);
+      `${nouvelleCarte.nom} a bien été ajoutée à ta collection.`
+    );
+    setNotificationVisible(true);
+    setTimeout(() => setNotificationVisible(false), 3000);
 
     setNom("");
     setEdition("");
@@ -308,7 +377,7 @@ window.setTimeout(() => {
     setPrix("");
     setImage("");
     setIdApi("");
-    setProprietaireCarte(collectionActive);
+    setQuantite("1");
   }
 
   async function mettreAJourPrix() {
@@ -761,6 +830,7 @@ window.setTimeout(() => {
         id_api: carteEnModification.idApi.trim(),
         mise_a_jour_auto: carteEnModification.miseAJourAuto,
         proprietaire: carteEnModification.proprietaire,
+        quantite: Math.max(1, Math.floor(carteEnModification.quantite || 1)),
       })
       .eq("id", carteEnModification.identifiant);
 
@@ -1252,25 +1322,35 @@ const cartesPokemon = cartesFiltrees.filter((carte) => {
   return !estDresseur && !estEnergie;
 });
 
-const nombreDresseurs = cartesCollection.filter((carte) => {
+const nombreExemplairesCollection = cartesCollection.reduce(
+  (total, carte) => total + (carte.quantite ?? 1),
+  0
+);
+
+const nombreDresseurs = cartesCollection
+  .filter((carte) => {
   const typeNormalise = normaliserTypeCarte(carte.type);
 
   return (
     typeNormalise.startsWith("dresseur") ||
     typesDresseur.includes(typeNormalise)
   );
-}).length;
+})
+  .reduce((total, carte) => total + (carte.quantite ?? 1), 0);
 
-const nombreEnergies = cartesCollection.filter((carte) => {
+const nombreEnergies = cartesCollection
+  .filter((carte) => {
   const typeNormalise = normaliserTypeCarte(carte.type);
 
   return (
     typeNormalise.startsWith("energie") ||
     typesEnergie.includes(typeNormalise)
   );
-}).length;
+})
+  .reduce((total, carte) => total + (carte.quantite ?? 1), 0);
 
-const nombrePokemon = cartesCollection.length - nombreDresseurs - nombreEnergies;
+const nombrePokemon =
+  nombreExemplairesCollection - nombreDresseurs - nombreEnergies;
 
   const cartesParEdition = Object.entries(
     cartesFiltrees.reduce<Record<string, Carte[]>>((groupes, carte) => {
@@ -1311,8 +1391,9 @@ const nombrePokemon = cartesCollection.length - nombreDresseurs - nombreEnergies
 
 const valeurCollection = cartesCollection.reduce((total, carte) => {
   const prixCarte = Number(carte.prix);
+  const quantiteCarte = carte.quantite ?? 1;
 
-  return total + (Number.isNaN(prixCarte) ? 0 : prixCarte);
+  return total + (Number.isNaN(prixCarte) ? 0 : prixCarte * quantiteCarte);
 }, 0);
 
   const cartePlusChere =
@@ -1339,8 +1420,9 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
     };
   }
 
-  statistiques[typeCarte].nombre += 1;
-  statistiques[typeCarte].valeur += prixCarte;
+  const quantiteCarte = carte.quantite ?? 1;
+  statistiques[typeCarte].nombre += quantiteCarte;
+  statistiques[typeCarte].valeur += prixCarte * quantiteCarte;
 
   return statistiques;
 }, {});
@@ -1364,7 +1446,8 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
   const valeurDebutJour = cartesCollection.reduce(
     (total, carte) =>
       total +
-      (premiereValeurParCarte.get(carte.identifiant) ?? carte.prix),
+      (premiereValeurParCarte.get(carte.identifiant) ?? carte.prix) *
+        (carte.quantite ?? 1),
     0
   );
 
@@ -1389,7 +1472,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
         carte,
         prixPrecedent,
         prixActuel,
-        variation: prixActuel - prixPrecedent,
+        variation: (prixActuel - prixPrecedent) * (carte.quantite ?? 1),
       };
     })
     .filter(
@@ -1570,7 +1653,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
     }`}
   >
   <HeaderPokemon
-    totalCartes={cartesCollection.length}
+    totalCartes={nombreExemplairesCollection}
     valeurCollection={valeurCollection}
   />
 
@@ -1650,6 +1733,8 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
         setIdApi={setIdApi}
         proprietaire={proprietaireCarte}
         setProprietaire={setProprietaireCarte}
+        quantite={quantite}
+        setQuantite={setQuantite}
         onEnregistrer={ajouterCarte}
       />
 
@@ -1688,11 +1773,11 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
         </div>
 
         <p className="mt-5 text-4xl font-black text-white">
-          {cartesCollection.length}
+          {nombreExemplairesCollection}
         </p>
 
         <p className="mt-2 text-sm text-slate-400">
-          {cartes.length > 1
+          {nombreExemplairesCollection > 1
             ? "cartes dans la collection"
             : "carte dans la collection"}
         </p>
@@ -1744,8 +1829,8 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
         </div>
 
         <p className="mt-5 text-4xl font-black text-white">
-          {(cartesCollection.length > 0
-            ? valeurCollection / cartes.length
+          {(nombreExemplairesCollection > 0
+            ? valeurCollection / nombreExemplairesCollection
             : 0
           ).toLocaleString("fr-FR", {
             minimumFractionDigits: 2,
@@ -2859,6 +2944,23 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
               />
             </label>
 
+            <label className="font-semibold">
+              Quantité
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={carteEnModification.quantite}
+                onChange={(e) =>
+                  setCarteEnModification({
+                    ...carteEnModification,
+                    quantite: Math.max(1, Number(e.target.value) || 1),
+                  })
+                }
+                className="mt-2 w-full rounded-xl bg-slate-700 p-3 outline-none focus:ring-2 focus:ring-orange-400"
+              />
+            </label>
+
             <label className="font-semibold md:col-span-2">
               Adresse de l&apos;image
               <input
@@ -3091,8 +3193,16 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
             </div>
 
             <p className="text-slate-400">
-              {cartesFiltrees.length} carte
-              {cartesFiltrees.length > 1 ? "s" : ""}
+              {cartesFiltrees.reduce(
+                (total, carte) => total + (carte.quantite ?? 1),
+                0
+              )} carte
+              {cartesFiltrees.reduce(
+                (total, carte) => total + (carte.quantite ?? 1),
+                0
+              ) > 1
+                ? "s"
+                : ""}
             </p>
           </div>
 
@@ -3127,6 +3237,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                     type={carte.type}
                     etat={carte.etat}
                     prix={carte.prix}
+                    quantite={carte.quantite}
                     image={carte.image}
                     historique={historiqueCarte}
                     selectionnee={cartesSelectionnees.includes(
@@ -3211,6 +3322,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                     type={carte.type}
                     etat={carte.etat}
                     prix={carte.prix}
+                    quantite={carte.quantite}
                     image={carte.image}
                     historique={historiqueCarte}
                     selectionnee={cartesSelectionnees.includes(
@@ -3297,6 +3409,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                     type={carte.type}
                     etat={carte.etat}
                     prix={carte.prix}
+                    quantite={carte.quantite}
                     image={carte.image}
                     historique={historiqueCarte}
                     selectionnee={cartesSelectionnees.includes(
@@ -3383,6 +3496,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                     type={carte.type}
                     etat={carte.etat}
                     prix={carte.prix}
+                    quantite={carte.quantite}
                     image={carte.image}
                     historique={historiqueCarte}
                     selectionnee={cartesSelectionnees.includes(
@@ -3489,6 +3603,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                       type={carte.type}
                       etat={carte.etat}
                       prix={carte.prix}
+                      quantite={carte.quantite}
                       image={carte.image}
                       historique={historiqueCarte}
                       selectionnee={cartesSelectionnees.includes(
@@ -3745,6 +3860,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                                     type={carte.type}
                                     etat={carte.etat}
                                     prix={carte.prix}
+                                    quantite={carte.quantite}
                                     image={carte.image}
                                     historique={historiqueCarte}
                                     selectionnee={cartesSelectionnees.includes(
