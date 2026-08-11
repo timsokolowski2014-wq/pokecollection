@@ -1,0 +1,61 @@
+import { NextResponse } from "next/server";
+
+type Proprietaire = "Timothée" | "Valentin";
+
+export async function POST(requete: Request) {
+  try {
+    const corps = await requete.json();
+
+    const proprietaire = corps?.proprietaire as Proprietaire | undefined;
+    const code = String(corps?.code ?? "").trim();
+
+    if (
+      proprietaire !== "Timothée" &&
+      proprietaire !== "Valentin"
+    ) {
+      return NextResponse.json(
+        { ok: false, message: "Propriétaire invalide." },
+        { status: 400 }
+      );
+    }
+
+    if (!/^\d{6}$/.test(code)) {
+      return NextResponse.json(
+        { ok: false, message: "Le code doit contenir 6 chiffres." },
+        { status: 400 }
+      );
+    }
+
+    const codeAttendu =
+      proprietaire === "Timothée"
+        ? process.env.CODE_TIMOTHEE
+        : process.env.CODE_VALENTIN;
+
+    if (!codeAttendu || !/^\d{6}$/.test(codeAttendu)) {
+      console.error(
+        `Le code serveur de ${proprietaire} n'est pas configuré correctement.`
+      );
+
+      return NextResponse.json(
+        { ok: false, message: "Configuration serveur incomplète." },
+        { status: 500 }
+      );
+    }
+
+    if (code !== codeAttendu) {
+      return NextResponse.json(
+        { ok: false, message: "Code incorrect." },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (erreur) {
+    console.error("Erreur de vérification du code :", erreur);
+
+    return NextResponse.json(
+      { ok: false, message: "Erreur serveur." },
+      { status: 500 }
+    );
+  }
+}

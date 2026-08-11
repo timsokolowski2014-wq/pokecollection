@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -258,6 +260,36 @@ const nombreCartesValentin = cartes.filter(
 
     setCartes((anciennesCartes) => [...anciennesCartes, nouvelleCarte]);
 
+    // Enregistre le prix de départ afin que l'évolution puisse être calculée
+    // dès qu'un futur prix change.
+    const { data: historiqueInitial, error: erreurHistoriqueInitial } =
+      await supabase
+        .from("historique_prix")
+        .insert({
+          carte_id: nouvelleCarte.identifiant,
+          prix: nouvelleCarte.prix,
+          date_releve: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+    if (erreurHistoriqueInitial) {
+      console.error(
+        "Impossible d'enregistrer le prix initial :",
+        erreurHistoriqueInitial
+      );
+    } else if (historiqueInitial) {
+      setHistoriquePrix((ancienHistorique) => [
+        ...ancienHistorique,
+        {
+          id: historiqueInitial.id,
+          carte_id: historiqueInitial.carte_id,
+          prix: Number(historiqueInitial.prix) || 0,
+          date_releve: historiqueInitial.date_releve,
+        },
+      ]);
+    }
+
     setMessageNotification(
   `${nouvelleCarte.nom} a bien été ajoutée à ta collection.`
 );
@@ -429,6 +461,7 @@ window.setTimeout(() => {
 
           if (typeof nouveauPrix !== "number") continue;
 
+          const ancienPrix = Number(carte.prix) || 0;
           const dateMiseAJour =
             prixCardmarket?.updated ?? new Date().toISOString();
 
@@ -443,6 +476,41 @@ window.setTimeout(() => {
           if (erreurMiseAJour) {
             console.error(erreurMiseAJour);
             continue;
+          }
+
+          // On ajoute un point d'historique seulement quand le prix change.
+          // Cela évite d'enregistrer plusieurs fois le même prix et permet
+          // aux hausses, baisses et graphiques d'évoluer correctement.
+          if (Math.abs(nouveauPrix - ancienPrix) >= 0.005) {
+            const {
+              data: nouvelHistorique,
+              error: erreurHistoriqueAuto,
+            } = await supabase
+              .from("historique_prix")
+              .insert({
+                carte_id: carte.identifiant,
+                prix: nouveauPrix,
+                date_releve: new Date().toISOString(),
+              })
+              .select()
+              .single();
+
+            if (erreurHistoriqueAuto) {
+              console.error(
+                "Erreur historique automatique :",
+                erreurHistoriqueAuto
+              );
+            } else if (nouvelHistorique) {
+              setHistoriquePrix((ancienHistorique) => [
+                ...ancienHistorique,
+                {
+                  id: nouvelHistorique.id,
+                  carte_id: nouvelHistorique.carte_id,
+                  prix: Number(nouvelHistorique.prix) || 0,
+                  date_releve: nouvelHistorique.date_releve,
+                },
+              ]);
+            }
           }
 
           setCartes((anciennesCartes) =>
