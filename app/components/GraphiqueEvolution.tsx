@@ -78,21 +78,43 @@ function prixCarteALaDate(
   const finJour = new Date(date);
   finJour.setHours(23, 59, 59, 999);
 
-  const lignes = historiquePrix
-    .filter(
-      (ligne) =>
-        ligne.carte_id === carte.identifiant &&
-        new Date(ligne.date_releve).getTime() <= finJour.getTime()
-    )
+  const historiqueCarte = historiquePrix
+    .filter((ligne) => ligne.carte_id === carte.identifiant)
     .sort(
       (a, b) =>
         new Date(a.date_releve).getTime() -
         new Date(b.date_releve).getTime()
     );
 
-  return lignes.length > 0
-    ? (Number(lignes[lignes.length - 1].prix) || 0) * (carte.quantite ?? 1)
-    : (Number(carte.prix) || 0) * (carte.quantite ?? 1);
+  const lignesAvantOuPendantLaDate = historiqueCarte.filter(
+    (ligne) =>
+      new Date(ligne.date_releve).getTime() <= finJour.getTime()
+  );
+
+  // Si un prix existait déjà à cette date, on prend le dernier connu.
+  if (lignesAvantOuPendantLaDate.length > 0) {
+    return (
+      (Number(
+        lignesAvantOuPendantLaDate[
+          lignesAvantOuPendantLaDate.length - 1
+        ].prix
+      ) || 0) *
+      (carte.quantite ?? 1)
+    );
+  }
+
+  // Avant le premier relevé, on utilise le tout premier vrai prix enregistré.
+  // Surtout pas le prix actuel, sinon la courbe revient artificiellement
+  // au même niveau au début et à la fin.
+  if (historiqueCarte.length > 0) {
+    return (
+      (Number(historiqueCarte[0].prix) || 0) *
+      (carte.quantite ?? 1)
+    );
+  }
+
+  // Cas exceptionnel : aucune donnée historique n'existe encore.
+  return (Number(carte.prix) || 0) * (carte.quantite ?? 1);
 }
 
 function creerPoints(
