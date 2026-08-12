@@ -1440,27 +1440,34 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
   const debutAujourdhui = new Date();
   debutAujourdhui.setHours(0, 0, 0, 0);
 
-  const historiqueAujourdhui = historiquePrix.filter(
-    (ligne) => new Date(ligne.date_releve) >= debutAujourdhui
-  );
+  const dernierPrixAvantAujourdhui = new Map<number, number>();
 
-  const premiereValeurParCarte = new Map<number, number>();
+  historiquePrix
+    .filter(
+      (ligne) =>
+        new Date(ligne.date_releve).getTime() < debutAujourdhui.getTime()
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.date_releve).getTime() -
+        new Date(b.date_releve).getTime()
+    )
+    .forEach((ligne) => {
+      dernierPrixAvantAujourdhui.set(ligne.carte_id, ligne.prix);
+    });
 
-  historiqueAujourdhui.forEach((ligne) => {
-    if (!premiereValeurParCarte.has(ligne.carte_id)) {
-      premiereValeurParCarte.set(ligne.carte_id, ligne.prix);
-    }
-  });
+  const valeurReferenceAujourdhui = cartesCollection.reduce(
+    (total, carte) => {
+      const prixReference =
+        dernierPrixAvantAujourdhui.get(carte.identifiant) ?? carte.prix;
 
-  const valeurDebutJour = cartesCollection.reduce(
-    (total, carte) =>
-      total +
-      (premiereValeurParCarte.get(carte.identifiant) ?? carte.prix) *
-        (carte.quantite ?? 1),
+      return total + prixReference * (carte.quantite ?? 1);
+    },
     0
   );
 
-  const evolutionAujourdhui = valeurCollection - valeurDebutJour;
+  const evolutionAujourdhui =
+    valeurCollection - valeurReferenceAujourdhui;
 
   const variationsCartes = cartesCollection
     .map((carte) => {
@@ -1907,7 +1914,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
         </p>
 
         <p className="mt-2 text-sm text-slate-400">
-          Depuis le premier relevé du jour
+          Depuis le dernier relevé avant aujourd’hui
         </p>
       </div>
     </div>
