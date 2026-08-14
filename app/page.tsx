@@ -427,6 +427,7 @@ const nombreCartesValentin = cartes
             continue;
           }
 
+          const ancienPrix = Number(carte.prix) || 0;
           const dateMiseAJour =
             prixCardmarket?.updated ?? new Date().toISOString();
 
@@ -444,31 +445,36 @@ const nombreCartesValentin = cartes
             continue;
           }
 
-          const {
-            data: nouvelHistorique,
-            error: erreurHistorique,
-          } = await supabase
-            .from("historique_prix")
-            .insert({
-              carte_id: carte.identifiant,
-              prix: nouveauPrix,
-              date_releve: dateMiseAJour,
-            })
-            .select()
-            .single();
+          // L'historique doit représenter le moment où PokéCollection
+          // constate réellement un changement de prix.
+          // On n'utilise donc PAS la date "updated" de Cardmarket ici.
+          if (Math.abs(nouveauPrix - ancienPrix) >= 0.005) {
+            const {
+              data: nouvelHistorique,
+              error: erreurHistorique,
+            } = await supabase
+              .from("historique_prix")
+              .insert({
+                carte_id: carte.identifiant,
+                prix: nouveauPrix,
+                date_releve: new Date().toISOString(),
+              })
+              .select()
+              .single();
 
-          if (erreurHistorique) {
-            console.error("Erreur historique :", erreurHistorique);
-          } else if (nouvelHistorique) {
-            setHistoriquePrix((ancienHistorique) => [
-              ...ancienHistorique,
-              {
-                id: nouvelHistorique.id,
-                carte_id: nouvelHistorique.carte_id,
-                prix: Number(nouvelHistorique.prix) || 0,
-                date_releve: nouvelHistorique.date_releve,
-              },
-            ]);
+            if (erreurHistorique) {
+              console.error("Erreur historique :", erreurHistorique);
+            } else if (nouvelHistorique) {
+              setHistoriquePrix((ancienHistorique) => [
+                ...ancienHistorique,
+                {
+                  id: nouvelHistorique.id,
+                  carte_id: nouvelHistorique.carte_id,
+                  prix: Number(nouvelHistorique.prix) || 0,
+                  date_releve: nouvelHistorique.date_releve,
+                },
+              ]);
+            }
           }
 
           setCartes((anciennesCartes) =>
