@@ -22,6 +22,8 @@ type FormulaireProps = {
   proprietaire: "Timothée" | "Valentin";
   quantite: string;
   setQuantite: (valeur: string) => void;
+  reverse: boolean;
+  setReverse: (valeur: boolean) => void;
   setProprietaire: (valeur: "Timothée" | "Valentin") => void;
   onEnregistrer: () => void;
 };
@@ -41,6 +43,11 @@ type CarteDetaillee = {
   types?: string[];
   set?: {
     name?: string;
+  };
+  variants?: {
+    normal?: boolean;
+    reverse?: boolean;
+    holo?: boolean;
   };
   pricing?: {
     cardmarket?: {
@@ -93,6 +100,8 @@ export default function Formulaire({
   setProprietaire,
   quantite,
   setQuantite,
+  reverse,
+  setReverse,
   onEnregistrer,
 }: FormulaireProps) {
   const [resultats, setResultats] = useState<CarteRecherche[]>([]);
@@ -102,6 +111,67 @@ export default function Formulaire({
   const [carteChoisie, setCarteChoisie] = useState(false);
   const [imageManquante, setImageManquante] = useState(false);
   const [nomFichier, setNomFichier] = useState("");
+  const [detailsCarteChoisie, setDetailsCarteChoisie] =
+    useState<CarteDetaillee | null>(null);
+  const [imageNormale, setImageNormale] = useState("");
+  const [imageReverse, setImageReverse] = useState("");
+
+  function trouverPrixSelonVersion(
+    details: CarteDetaillee,
+    estReverse: boolean
+  ) {
+    const cardmarket = details.pricing?.cardmarket;
+
+    if (!cardmarket) return null;
+
+    if (estReverse) {
+      const prixReverse =
+        cardmarket["trend-holo"] ??
+        cardmarket["avg-holo"];
+
+      if (typeof prixReverse === "number" && prixReverse > 0) {
+        return prixReverse;
+      }
+    }
+
+    const prixNormal =
+      cardmarket.trend ??
+      cardmarket.avg ??
+      cardmarket.avg7 ??
+      cardmarket.avg30;
+
+    return typeof prixNormal === "number" ? prixNormal : null;
+  }
+
+  function changerVersion(estReverse: boolean) {
+    setReverse(estReverse);
+
+    if (detailsCarteChoisie) {
+      const prixVersion = trouverPrixSelonVersion(
+        detailsCarteChoisie,
+        estReverse
+      );
+
+      if (typeof prixVersion === "number") {
+        setPrix(prixVersion.toFixed(2));
+      }
+    }
+
+    if (estReverse) {
+      // TCGdex ne fournit pas toujours une image distincte pour la Reverse.
+      // Si l'utilisateur a chargé une vraie photo Reverse, on la réutilise.
+      if (imageReverse) {
+        setImage(imageReverse);
+        setNomFichier("Image Reverse");
+      } else if (imageNormale) {
+        setImage(imageNormale);
+        setNomFichier("Image TCGdex (aperçu)");
+      }
+    } else if (imageNormale) {
+      setImage(imageNormale);
+      setNomFichier("Image normale");
+    }
+  }
 
   async function rechercherCartes() {
     const nomRecherche = nom.trim();
@@ -205,15 +275,9 @@ export default function Formulaire({
       }
 
       const details: CarteDetaillee = await reponse.json();
-      const prixCardmarket = details.pricing?.cardmarket;
+      setDetailsCarteChoisie(details);
 
-      const prixTrouve =
-        prixCardmarket?.trend ??
-        prixCardmarket?.avg ??
-        prixCardmarket?.avg7 ??
-        prixCardmarket?.avg30 ??
-        prixCardmarket?.["trend-holo"] ??
-        prixCardmarket?.["avg-holo"];
+      const prixTrouve = trouverPrixSelonVersion(details, reverse);
 
       const typeAnglais = details.types?.[0] ?? "";
       const typeFrancais =
@@ -229,8 +293,17 @@ export default function Formulaire({
       const imageTrouvee = details.image ?? carte.image;
 
       if (imageTrouvee) {
-        setImage(`${imageTrouvee}/high.webp`);
-        setNomFichier("Image TCGdex");
+        const imageTCGdex = `${imageTrouvee}/high.webp`;
+
+        setImageNormale(imageTCGdex);
+        setImageReverse("");
+
+        // TCGdex fournit généralement le même visuel de base pour
+        // normale/reverse. Une vraie photo Reverse peut être chargée ensuite.
+        setImage(imageTCGdex);
+        setNomFichier(
+          reverse ? "Image TCGdex (aperçu Reverse)" : "Image TCGdex"
+        );
         setImageManquante(false);
       } else {
         setImage("");
@@ -276,6 +349,13 @@ export default function Formulaire({
     lecteur.onload = () => {
       if (typeof lecteur.result === "string") {
         setImage(lecteur.result);
+
+        if (reverse) {
+          setImageReverse(lecteur.result);
+        } else {
+          setImageNormale(lecteur.result);
+        }
+
         setNomFichier(fichier.name);
         setImageManquante(false);
       }
@@ -533,6 +613,46 @@ export default function Formulaire({
             </select>
           </label>
         )}
+
+        <div>
+          <p className="text-lg font-bold text-white">
+            ✨ Version de la carte
+          </p>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => changerVersion(false)}
+              className={`rounded-2xl border px-4 py-4 font-bold transition ${
+                !reverse
+                  ? "border-blue-300/70 bg-blue-600 text-white shadow-lg shadow-blue-950/30"
+                  : "border-slate-600 bg-slate-700 text-slate-300 hover:border-blue-400/50"
+              }`}
+            >
+              🃏 Normale
+            </button>
+
+            <button
+              type="button"
+              onClick={() => changerVersion(true)}
+              className={`rounded-2xl border px-4 py-4 font-bold transition ${
+                reverse
+                  ? "border-fuchsia-300/70 bg-fuchsia-600 text-white shadow-lg shadow-fuchsia-950/30"
+                  : "border-slate-600 bg-slate-700 text-slate-300 hover:border-fuchsia-400/50"
+              }`}
+            >
+              ✨ Reverse
+            </button>
+          </div>
+
+          {reverse && (
+            <div className="mt-3 rounded-xl border border-fuchsia-400/30 bg-fuchsia-950/20 p-3 text-sm text-fuchsia-100">
+              Le prix Reverse est utilisé automatiquement quand TCGdex/Cardmarket
+              le fournit. Pour avoir la vraie photo Reverse, utilise
+              « Changer l’image » après avoir choisi la carte.
+            </div>
+          )}
+        </div>
 
         <label className="block text-lg font-bold text-white">
           ⭐ État

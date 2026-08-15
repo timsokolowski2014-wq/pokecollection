@@ -7,6 +7,7 @@ type PokemonCardProps = {
   etat: string;
   prix: number;
   quantite?: number;
+  reverse?: boolean;
   image: string;
   historique?: { prix: number; date?: string; date_releve?: string }[];
   selectionnee?: boolean;
@@ -164,6 +165,7 @@ export default function PokemonCard({
   etat,
   prix,
   quantite = 1,
+  reverse = false,
   image,
   selectionnee = false,
   onSelectionner,
@@ -266,6 +268,12 @@ export default function PokemonCard({
             })}{" "}
             €
           </p>
+
+          {reverse && (
+            <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-fuchsia-400/50 bg-fuchsia-400/10 px-3 py-2 text-sm font-black text-fuchsia-200">
+              ✨ Reverse
+            </div>
+          )}
 
           {quantite > 1 && (
             <div

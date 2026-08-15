@@ -25,6 +25,12 @@ type HistoriquePrix = {
   date_releve: string;
 };
 
+type HistoriqueQuantite = {
+  carte_id: number;
+  quantite: number;
+  date_releve: string;
+};
+
 type Periode = 7 | 30 | 365;
 type Mode = "collection" | "edition" | "carte";
 
@@ -32,6 +38,7 @@ type Props = {
   mode: Mode;
   cartes: Carte[];
   historiquePrix: HistoriquePrix[];
+  historiqueQuantite?: HistoriqueQuantite[];
   carteId?: number | null;
   edition?: string;
   onFermer: () => void;
@@ -70,6 +77,19 @@ function obtenirDates(periode: Periode) {
   return dates;
 }
 
+function historiquePrixCarte(
+  carte: Carte,
+  historiquePrix: HistoriquePrix[]
+) {
+  return historiquePrix
+    .filter((ligne) => ligne.carte_id === carte.identifiant)
+    .sort(
+      (a, b) =>
+        new Date(a.date_releve).getTime() -
+        new Date(b.date_releve).getTime()
+    );
+}
+
 function prixCarteALaDate(
   carte: Carte,
   date: Date,
@@ -78,48 +98,78 @@ function prixCarteALaDate(
   const finJour = new Date(date);
   finJour.setHours(23, 59, 59, 999);
 
-  const historiqueCarte = historiquePrix
-    .filter((ligne) => ligne.carte_id === carte.identifiant)
-    .sort(
-      (a, b) =>
-        new Date(a.date_releve).getTime() -
-        new Date(b.date_releve).getTime()
-    );
+  const historiqueCarte = historiquePrixCarte(carte, historiquePrix);
 
   const lignesAvantOuPendantLaDate = historiqueCarte.filter(
     (ligne) =>
       new Date(ligne.date_releve).getTime() <= finJour.getTime()
   );
 
-  // Si un prix existait déjà à cette date, on prend le dernier connu.
+  // S'il existe déjà un relevé à cette date, on prend le dernier connu.
   if (lignesAvantOuPendantLaDate.length > 0) {
     return (
-      (Number(
+      Number(
         lignesAvantOuPendantLaDate[
           lignesAvantOuPendantLaDate.length - 1
         ].prix
-      ) || 0) *
-      (carte.quantite ?? 1)
+      ) || 0
     );
   }
 
-  // Avant le premier relevé, on utilise le tout premier vrai prix enregistré.
-  // Surtout pas le prix actuel, sinon la courbe revient artificiellement
-  // au même niveau au début et à la fin.
+  // Pour les dates antérieures au premier relevé disponible,
+  // on conserve le premier prix connu au lieu de mettre la carte à 0 €.
+  // Cela préserve l'ancien historique de la collection.
   if (historiqueCarte.length > 0) {
-    return (
-      (Number(historiqueCarte[0].prix) || 0) *
-      (carte.quantite ?? 1)
-    );
+    return Number(historiqueCarte[0].prix) || 0;
   }
 
-  // Cas exceptionnel : aucune donnée historique n'existe encore.
-  return (Number(carte.prix) || 0) * (carte.quantite ?? 1);
+  // Carte sans aucun historique : on utilise son prix actuel.
+  return Number(carte.prix) || 0;
+}
+
+function quantiteCarteALaDate(
+  carte: Carte,
+  date: Date,
+  historiquePrix: HistoriquePrix[],
+  historiqueQuantite: HistoriqueQuantite[]
+) {
+  const finJour = new Date(date);
+  finJour.setHours(23, 59, 59, 999);
+
+  const historiqueCarte = historiquePrixCarte(carte, historiquePrix);
+
+  const quantitesAvantOuPendantLaDate = historiqueQuantite
+    .filter(
+      (ligne) =>
+        ligne.carte_id === carte.identifiant &&
+        new Date(ligne.date_releve).getTime() <= finJour.getTime()
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.date_releve).getTime() -
+        new Date(b.date_releve).getTime()
+    );
+
+  // Avant le début du suivi des quantités, on ne peut pas connaître
+  // les anciens doubles/triples. On considère donc 1 exemplaire.
+  if (quantitesAvantOuPendantLaDate.length === 0) {
+    return 1;
+  }
+
+  return Math.max(
+    1,
+    Number(
+      quantitesAvantOuPendantLaDate[
+        quantitesAvantOuPendantLaDate.length - 1
+      ].quantite
+    ) || 1
+  );
 }
 
 function creerPoints(
   cartes: Carte[],
   historiquePrix: HistoriquePrix[],
+  historiqueQuantite: HistoriqueQuantite[],
   periode: Periode
 ): Point[] {
   const dates = obtenirDates(periode);
@@ -131,14 +181,28 @@ function creerPoints(
 
     const valeur = estAujourdhui
       ? cartes.reduce(
-          (total, carte) => total + (Number(carte.prix) || 0) * (carte.quantite ?? 1),
+          (total, carte) =>
+            total +
+            (Number(carte.prix) || 0) *
+              Math.max(1, carte.quantite ?? 1),
           0
         )
-      : cartes.reduce(
-          (total, carte) =>
-            total + prixCarteALaDate(carte, date, historiquePrix),
-          0
-        );
+      : cartes.reduce((total, carte) => {
+          const prix = prixCarteALaDate(
+            carte,
+            date,
+            historiquePrix
+          );
+
+          const quantite = quantiteCarteALaDate(
+            carte,
+            date,
+            historiquePrix,
+            historiqueQuantite
+          );
+
+          return total + prix * quantite;
+        }, 0);
 
     return {
       date: date.toLocaleDateString("fr-FR", {
@@ -159,6 +223,7 @@ export default function GraphiqueEvolution({
   mode,
   cartes,
   historiquePrix,
+  historiqueQuantite = [],
   carteId,
   edition = "",
   onFermer,
@@ -188,8 +253,14 @@ export default function GraphiqueEvolution({
   );
 
   const donnees = useMemo(
-    () => creerPoints(cartesDuGraphique, historiquePrix, periode),
-    [cartesDuGraphique, historiquePrix, periode]
+    () =>
+      creerPoints(
+        cartesDuGraphique,
+        historiquePrix,
+        historiqueQuantite,
+        periode
+      ),
+    [cartesDuGraphique, historiquePrix, historiqueQuantite, periode]
   );
 
   const premiereValeur = donnees[0]?.valeur ?? 0;

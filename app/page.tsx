@@ -21,6 +21,7 @@ type Carte = {
   miseAJourAuto: boolean;
   proprietaire: "Timothée" | "Valentin";
   quantite: number;
+  reverse: boolean;
 };
 
 type HistoriquePrix = {
@@ -30,9 +31,18 @@ type HistoriquePrix = {
   date_releve: string;
 };
 
+type HistoriqueQuantite = {
+  id: number;
+  carte_id: number;
+  quantite: number;
+  date_releve: string;
+};
+
 export default function Home() {
   const [cartes, setCartes] = useState<Carte[]>([]);
   const [historiquePrix, setHistoriquePrix] = useState<HistoriquePrix[]>([]);
+  const [historiqueQuantite, setHistoriqueQuantite] =
+    useState<HistoriqueQuantite[]>([]);
 
   const [nom, setNom] = useState("");
   const [edition, setEdition] = useState("");
@@ -43,6 +53,7 @@ export default function Home() {
   const [image, setImage] = useState("");
   const [idApi, setIdApi] = useState("");
   const [quantite, setQuantite] = useState("1");
+  const [reverse, setReverse] = useState(false);
   const [proprietaireCarte, setProprietaireCarte] = useState<
     "Timothée" | "Valentin"
   >("Timothée");
@@ -174,6 +185,7 @@ const nombreCartesValentin = cartes
         proprietaire:
           carte.proprietaire === "Valentin" ? "Valentin" : "Timothée",
         quantite: Math.max(1, Number(carte.quantite) || 1),
+        reverse: carte.reverse === true,
       }));
 
       setCartes(cartesChargees);
@@ -197,6 +209,30 @@ const nombreCartesValentin = cartes
             id: ligne.id,
             carte_id: ligne.carte_id,
             prix: Number(ligne.prix) || 0,
+            date_releve: ligne.date_releve,
+          }))
+        );
+      }
+
+      const {
+        data: historiqueQuantiteSupabase,
+        error: erreurHistoriqueQuantite,
+      } = await supabase
+        .from("historique_quantite")
+        .select("*")
+        .order("date_releve", { ascending: true });
+
+      if (erreurHistoriqueQuantite) {
+        console.error(
+          "Erreur pendant le chargement de l'historique des quantités :",
+          erreurHistoriqueQuantite
+        );
+      } else {
+        setHistoriqueQuantite(
+          (historiqueQuantiteSupabase ?? []).map((ligne) => ({
+            id: ligne.id,
+            carte_id: ligne.carte_id,
+            quantite: Math.max(1, Number(ligne.quantite) || 1),
             date_releve: ligne.date_releve,
           }))
         );
@@ -241,6 +277,7 @@ const nombreCartesValentin = cartes
     const carteExistante = cartes.find((carte) => {
       if (carte.proprietaire !== proprietaireCarte) return false;
       if (carte.etat.trim().toLowerCase() !== etatNettoye) return false;
+      if (carte.reverse !== reverse) return false;
 
       const memeIdApi =
         idApiNettoye !== "" &&
@@ -276,6 +313,39 @@ const nombreCartesValentin = cartes
         )
       );
 
+      const {
+        data: nouvelHistoriqueQuantite,
+        error: erreurHistoriqueQuantite,
+      } = await supabase
+        .from("historique_quantite")
+        .insert({
+          carte_id: carteExistante.identifiant,
+          quantite: nouvelleQuantite,
+          date_releve: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (erreurHistoriqueQuantite) {
+        console.error(
+          "Impossible d'enregistrer la nouvelle quantité :",
+          erreurHistoriqueQuantite
+        );
+      } else if (nouvelHistoriqueQuantite) {
+        setHistoriqueQuantite((ancienHistorique) => [
+          ...ancienHistorique,
+          {
+            id: nouvelHistoriqueQuantite.id,
+            carte_id: nouvelHistoriqueQuantite.carte_id,
+            quantite: Math.max(
+              1,
+              Number(nouvelHistoriqueQuantite.quantite) || 1
+            ),
+            date_releve: nouvelHistoriqueQuantite.date_releve,
+          },
+        ]);
+      }
+
       setMessageNotification(
         `${carteExistante.nom} est maintenant en ×${nouvelleQuantite}.`
       );
@@ -291,6 +361,7 @@ const nombreCartesValentin = cartes
       setImage("");
       setIdApi("");
       setQuantite("1");
+      setReverse(false);
       return;
     }
 
@@ -308,6 +379,7 @@ const nombreCartesValentin = cartes
         mise_a_jour_auto: true,
         proprietaire: proprietaireCarte,
         quantite: quantiteNumerique,
+        reverse,
       })
       .select()
       .single();
@@ -331,6 +403,7 @@ const nombreCartesValentin = cartes
       proprietaire:
         data.proprietaire === "Valentin" ? "Valentin" : "Timothée",
       quantite: Math.max(1, Number(data.quantite) || 1),
+      reverse: data.reverse === true,
     };
 
     setCartes((anciennesCartes) => [...anciennesCartes, nouvelleCarte]);
@@ -363,6 +436,39 @@ const nombreCartesValentin = cartes
       ]);
     }
 
+    const {
+      data: historiqueQuantiteInitial,
+      error: erreurHistoriqueQuantiteInitial,
+    } = await supabase
+      .from("historique_quantite")
+      .insert({
+        carte_id: nouvelleCarte.identifiant,
+        quantite: nouvelleCarte.quantite,
+        date_releve: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (erreurHistoriqueQuantiteInitial) {
+      console.error(
+        "Impossible d'enregistrer la quantité initiale :",
+        erreurHistoriqueQuantiteInitial
+      );
+    } else if (historiqueQuantiteInitial) {
+      setHistoriqueQuantite((ancienHistorique) => [
+        ...ancienHistorique,
+        {
+          id: historiqueQuantiteInitial.id,
+          carte_id: historiqueQuantiteInitial.carte_id,
+          quantite: Math.max(
+            1,
+            Number(historiqueQuantiteInitial.quantite) || 1
+          ),
+          date_releve: historiqueQuantiteInitial.date_releve,
+        },
+      ]);
+    }
+
     setMessageNotification(
       `${nouvelleCarte.nom} a bien été ajoutée à ta collection.`
     );
@@ -378,6 +484,34 @@ const nombreCartesValentin = cartes
     setImage("");
     setIdApi("");
     setQuantite("1");
+    setReverse(false);
+  }
+
+  function choisirPrixCardmarket(
+    prixCardmarket: any,
+    estReverse: boolean
+  ) {
+    if (!prixCardmarket) return null;
+
+    if (estReverse) {
+      const prixReverse =
+        prixCardmarket["trend-holo"] ??
+        prixCardmarket["avg-holo"] ??
+        prixCardmarket["avg7-holo"] ??
+        prixCardmarket["avg30-holo"];
+
+      if (typeof prixReverse === "number" && prixReverse > 0) {
+        return prixReverse;
+      }
+    }
+
+    const prixNormal =
+      prixCardmarket.trend ??
+      prixCardmarket.avg ??
+      prixCardmarket.avg7 ??
+      prixCardmarket.avg30;
+
+    return typeof prixNormal === "number" ? prixNormal : null;
   }
 
   async function mettreAJourPrix() {
@@ -414,13 +548,10 @@ const nombreCartesValentin = cartes
           const carteApi = await reponse.json();
           const prixCardmarket = carteApi.pricing?.cardmarket;
 
-          const nouveauPrix =
-            prixCardmarket?.trend ??
-            prixCardmarket?.avg ??
-            prixCardmarket?.avg7 ??
-            prixCardmarket?.avg30 ??
-            prixCardmarket?.["trend-holo"] ??
-            prixCardmarket?.["avg-holo"];
+          const nouveauPrix = choisirPrixCardmarket(
+            prixCardmarket,
+            carte.reverse
+          );
 
           if (typeof nouveauPrix !== "number") {
             nombreEchecs++;
@@ -526,13 +657,10 @@ const nombreCartesValentin = cartes
           const carteApi = await reponse.json();
           const prixCardmarket = carteApi.pricing?.cardmarket;
 
-          const nouveauPrix =
-            prixCardmarket?.trend ??
-            prixCardmarket?.avg ??
-            prixCardmarket?.avg7 ??
-            prixCardmarket?.avg30 ??
-            prixCardmarket?.["trend-holo"] ??
-            prixCardmarket?.["avg-holo"];
+          const nouveauPrix = choisirPrixCardmarket(
+            prixCardmarket,
+            carte.reverse
+          );
 
           if (typeof nouveauPrix !== "number") continue;
 
@@ -673,6 +801,12 @@ const nombreCartesValentin = cartes
       )
     );
 
+    setHistoriqueQuantite((ancienHistorique) =>
+      ancienHistorique.filter(
+        (ligne) => !cartesSelectionnees.includes(ligne.carte_id)
+      )
+    );
+
     setFavoris((anciensFavoris) =>
       anciensFavoris.filter(
         (id) => !cartesSelectionnees.includes(id)
@@ -778,6 +912,12 @@ const nombreCartesValentin = cartes
       )
     );
 
+    setHistoriqueQuantite((ancienHistorique) =>
+      ancienHistorique.filter(
+        (ligne) => ligne.carte_id !== identifiant
+      )
+    );
+
     setCartesSelectionnees((anciennesSelections) =>
       anciennesSelections.filter((id) => id !== identifiant)
     );
@@ -812,6 +952,10 @@ const nombreCartesValentin = cartes
     if (!carteEnModification) return;
 
     const prixNumerique = Number(carteEnModification.prix);
+    const nouvelleQuantite = Math.max(
+      1,
+      Math.floor(carteEnModification.quantite || 1)
+    );
 
     if (
       !carteEnModification.nom.trim() ||
@@ -822,6 +966,17 @@ const nombreCartesValentin = cartes
       alert("Vérifie le nom, l'édition et le prix.");
       return;
     }
+
+    const carteAvantModification = cartes.find(
+      (carte) =>
+        carte.identifiant === carteEnModification.identifiant
+    );
+
+    const ancienPrix = Number(carteAvantModification?.prix) || 0;
+    const ancienneQuantite = Math.max(
+      1,
+      carteAvantModification?.quantite ?? 1
+    );
 
     const { error } = await supabase
       .from("cartes")
@@ -836,7 +991,8 @@ const nombreCartesValentin = cartes
         id_api: carteEnModification.idApi.trim(),
         mise_a_jour_auto: carteEnModification.miseAJourAuto,
         proprietaire: carteEnModification.proprietaire,
-        quantite: Math.max(1, Math.floor(carteEnModification.quantite || 1)),
+        quantite: nouvelleQuantite,
+        reverse: carteEnModification.reverse,
       })
       .eq("id", carteEnModification.identifiant);
 
@@ -845,10 +1001,84 @@ const nombreCartesValentin = cartes
       return;
     }
 
+    // Si le prix a été changé manuellement, on l'enregistre aussi
+    // dans l'historique pour que le graphique reste cohérent.
+    if (Math.abs(prixNumerique - ancienPrix) >= 0.005) {
+      const {
+        data: historiquePrixManuel,
+        error: erreurHistoriquePrixManuel,
+      } = await supabase
+        .from("historique_prix")
+        .insert({
+          carte_id: carteEnModification.identifiant,
+          prix: prixNumerique,
+          date_releve: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (erreurHistoriquePrixManuel) {
+        console.error(
+          "Erreur historique du prix manuel :",
+          erreurHistoriquePrixManuel
+        );
+      } else if (historiquePrixManuel) {
+        setHistoriquePrix((ancienHistorique) => [
+          ...ancienHistorique,
+          {
+            id: historiquePrixManuel.id,
+            carte_id: historiquePrixManuel.carte_id,
+            prix: Number(historiquePrixManuel.prix) || 0,
+            date_releve: historiquePrixManuel.date_releve,
+          },
+        ]);
+      }
+    }
+
+    // Même principe pour un passage ×1 -> ×2, ×2 -> ×3, etc.
+    if (nouvelleQuantite !== ancienneQuantite) {
+      const {
+        data: historiqueQuantiteManuel,
+        error: erreurHistoriqueQuantiteManuel,
+      } = await supabase
+        .from("historique_quantite")
+        .insert({
+          carte_id: carteEnModification.identifiant,
+          quantite: nouvelleQuantite,
+          date_releve: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (erreurHistoriqueQuantiteManuel) {
+        console.error(
+          "Erreur historique de quantité :",
+          erreurHistoriqueQuantiteManuel
+        );
+      } else if (historiqueQuantiteManuel) {
+        setHistoriqueQuantite((ancienHistorique) => [
+          ...ancienHistorique,
+          {
+            id: historiqueQuantiteManuel.id,
+            carte_id: historiqueQuantiteManuel.carte_id,
+            quantite: Math.max(
+              1,
+              Number(historiqueQuantiteManuel.quantite) || 1
+            ),
+            date_releve: historiqueQuantiteManuel.date_releve,
+          },
+        ]);
+      }
+    }
+
     setCartes((anciennesCartes) =>
       anciennesCartes.map((carte) =>
         carte.identifiant === carteEnModification.identifiant
-          ? { ...carteEnModification, prix: prixNumerique }
+          ? {
+              ...carteEnModification,
+              prix: prixNumerique,
+              quantite: nouvelleQuantite,
+            }
           : carte
       )
     );
@@ -1757,6 +1987,8 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
         setProprietaire={setProprietaireCarte}
         quantite={quantite}
         setQuantite={setQuantite}
+        reverse={reverse}
+        setReverse={setReverse}
         onEnregistrer={ajouterCarte}
       />
 
@@ -2852,6 +3084,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
             mode={graphiqueAffiche}
             cartes={cartesCollection}
             historiquePrix={historiquePrix}
+            historiqueQuantite={historiqueQuantite}
             carteId={carteGraphiqueId}
             edition={editionGraphique}
             onFermer={() => setGraphiqueAffiche(null)}
@@ -2982,6 +3215,45 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                 className="mt-2 w-full rounded-xl bg-slate-700 p-3 outline-none focus:ring-2 focus:ring-orange-400"
               />
             </label>
+
+            <div className="font-semibold">
+              Version
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCarteEnModification({
+                      ...carteEnModification,
+                      reverse: false,
+                    })
+                  }
+                  className={`rounded-xl px-3 py-3 ${
+                    !carteEnModification.reverse
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-700 text-slate-300"
+                  }`}
+                >
+                  🃏 Normale
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCarteEnModification({
+                      ...carteEnModification,
+                      reverse: true,
+                    })
+                  }
+                  className={`rounded-xl px-3 py-3 ${
+                    carteEnModification.reverse
+                      ? "bg-fuchsia-600 text-white"
+                      : "bg-slate-700 text-slate-300"
+                  }`}
+                >
+                  ✨ Reverse
+                </button>
+              </div>
+            </div>
 
             <label className="font-semibold md:col-span-2">
               Adresse de l&apos;image
@@ -3272,6 +3544,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                     etat={carte.etat}
                     prix={carte.prix}
                     quantite={carte.quantite}
+                    reverse={carte.reverse}
                     image={carte.image}
                     historique={historiqueCarte}
                     selectionnee={cartesSelectionnees.includes(
@@ -3357,6 +3630,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                     etat={carte.etat}
                     prix={carte.prix}
                     quantite={carte.quantite}
+                    reverse={carte.reverse}
                     image={carte.image}
                     historique={historiqueCarte}
                     selectionnee={cartesSelectionnees.includes(
@@ -3444,6 +3718,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                     etat={carte.etat}
                     prix={carte.prix}
                     quantite={carte.quantite}
+                    reverse={carte.reverse}
                     image={carte.image}
                     historique={historiqueCarte}
                     selectionnee={cartesSelectionnees.includes(
@@ -3517,6 +3792,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                     etat={carte.etat}
                     prix={carte.prix}
                     quantite={carte.quantite}
+                    reverse={carte.reverse}
                     image={carte.image}
                     historique={historiqueCarte}
                     selectionnee={cartesSelectionnees.includes(
@@ -3601,6 +3877,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                     etat={carte.etat}
                     prix={carte.prix}
                     quantite={carte.quantite}
+                    reverse={carte.reverse}
                     image={carte.image}
                     historique={historiqueCarte}
                     selectionnee={cartesSelectionnees.includes(
@@ -3708,6 +3985,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                       etat={carte.etat}
                       prix={carte.prix}
                       quantite={carte.quantite}
+                      reverse={carte.reverse}
                       image={carte.image}
                       historique={historiqueCarte}
                       selectionnee={cartesSelectionnees.includes(
@@ -3965,6 +4243,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
                                     etat={carte.etat}
                                     prix={carte.prix}
                                     quantite={carte.quantite}
+                                    reverse={carte.reverse}
                                     image={carte.image}
                                     historique={historiqueCarte}
                                     selectionnee={cartesSelectionnees.includes(
