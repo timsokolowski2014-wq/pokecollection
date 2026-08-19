@@ -1,3 +1,6 @@
+
+
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -2978,7 +2981,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
   )}
 </section>
 
-      <section className="mt-14 overflow-hidden rounded-3xl border border-blue-400/20 bg-slate-900/80 p-4 shadow-2xl backdrop-blur-xl sm:p-7">
+      <section id="actions-rapides" className="scroll-mt-6 mt-14 overflow-hidden rounded-3xl border border-blue-400/20 bg-slate-900/80 p-4 shadow-2xl backdrop-blur-xl sm:p-7">
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-300">
@@ -4297,6 +4300,33 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
           </div>
         </section>
       )}
+
+      {/* Boutons de navigation rapides */}
+      <div className="fixed bottom-4 right-4 z-[150] flex flex-col gap-3 sm:bottom-6 sm:right-6">
+        <button
+          type="button"
+          onClick={() =>
+            document
+              .getElementById("actions-rapides")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+          className="rounded-2xl border border-yellow-300/40 bg-yellow-400 px-4 py-3 font-black text-slate-950 shadow-2xl transition hover:-translate-y-0.5 hover:bg-yellow-300 active:translate-y-0 sm:px-5"
+          aria-label="Aller aux actions rapides"
+          title="Aller aux actions rapides"
+        >
+          ⚡ Actions
+        </button>
+
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="rounded-2xl border border-blue-300/40 bg-blue-600 px-4 py-3 font-black text-white shadow-2xl transition hover:-translate-y-0.5 hover:bg-blue-500 active:translate-y-0 sm:px-5"
+          aria-label="Retourner tout en haut"
+          title="Retourner tout en haut"
+        >
+          ⬆️ Haut
+        </button>
+      </div>
 
       {carteAgrandie && (
         <div
