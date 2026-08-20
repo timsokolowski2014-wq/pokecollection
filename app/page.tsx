@@ -1,6 +1,3 @@
-
-
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -73,7 +70,7 @@ export default function Home() {
   const [carteAgrandie, setCarteAgrandie] = useState<Carte | null>(null);
   const [editionsOuvertes, setEditionsOuvertes] = useState<string[]>([]);
   const [modeCollection, setModeCollection] = useState<
-    "cartes" | "editions" | "favoris" | "dresseurs" | "energies" | "pokemons" | "doubles"
+    "cartes" | "editions" | "favoris" | "dresseurs" | "pokemons" | "doubles"
   >("cartes");
 
   const [graphiqueAffiche, setGraphiqueAffiche] = useState<
@@ -90,16 +87,29 @@ export default function Home() {
 const [messageNotification, setMessageNotification] =
   useState("");
 
-const cartesCollection = cartes.filter(
-  (carte) => carte.proprietaire === collectionActive
-);
+const cartesCollection = cartes.filter((carte) => {
+  const typeNormalise = normaliserTypeCarte(carte.type);
+
+  return (
+    carte.proprietaire === collectionActive &&
+    !typeNormalise.startsWith("energie")
+  );
+});
 
 const nombreCartesTimothee = cartes
-  .filter((carte) => carte.proprietaire === "Timothée")
+  .filter(
+    (carte) =>
+      carte.proprietaire === "Timothée" &&
+      !normaliserTypeCarte(carte.type).startsWith("energie")
+  )
   .reduce((total, carte) => total + (carte.quantite ?? 1), 0);
 
 const nombreCartesValentin = cartes
-  .filter((carte) => carte.proprietaire === "Valentin")
+  .filter(
+    (carte) =>
+      carte.proprietaire === "Valentin" &&
+      !normaliserTypeCarte(carte.type).startsWith("energie")
+  )
   .reduce((total, carte) => total + (carte.quantite ?? 1), 0);
 
    const statistiquesParEdition = cartesCollection.reduce<
@@ -1507,19 +1517,6 @@ const nombreCartesValentin = cartes
   "stade",
 ];
 
-const typesEnergie = [
-  "energie",
-  "energie feu",
-  "energie eau",
-  "energie plante",
-  "energie electrique",
-  "energie psy",
-  "energie combat",
-  "energie obscurite",
-  "energie metal",
-  "energie fee",
-  "energie speciale",
-];
 
 function normaliserTypeCarte(typeCarte: string) {
   return typeCarte
@@ -1538,14 +1535,6 @@ const cartesDresseurs = cartesFiltrees.filter((carte) => {
   );
 });
 
-const cartesEnergies = cartesFiltrees.filter((carte) => {
-  const typeNormalise = normaliserTypeCarte(carte.type);
-
-  return (
-    typeNormalise.startsWith("energie") ||
-    typesEnergie.includes(typeNormalise)
-  );
-});
 
 const cartesPokemon = cartesFiltrees.filter((carte) => {
   const typeNormalise = normaliserTypeCarte(carte.type);
@@ -1554,11 +1543,7 @@ const cartesPokemon = cartesFiltrees.filter((carte) => {
     typeNormalise.startsWith("dresseur") ||
     typesDresseur.includes(typeNormalise);
 
-  const estEnergie =
-    typeNormalise.startsWith("energie") ||
-    typesEnergie.includes(typeNormalise);
-
-  return !estDresseur && !estEnergie;
+  return !estDresseur && !typeNormalise.startsWith("energie");
 });
 
 const nombreExemplairesCollection = cartesCollection.reduce(
@@ -1577,19 +1562,9 @@ const nombreDresseurs = cartesCollection
 })
   .reduce((total, carte) => total + (carte.quantite ?? 1), 0);
 
-const nombreEnergies = cartesCollection
-  .filter((carte) => {
-  const typeNormalise = normaliserTypeCarte(carte.type);
-
-  return (
-    typeNormalise.startsWith("energie") ||
-    typesEnergie.includes(typeNormalise)
-  );
-})
-  .reduce((total, carte) => total + (carte.quantite ?? 1), 0);
 
 const nombrePokemon =
-  nombreExemplairesCollection - nombreDresseurs - nombreEnergies;
+  nombreExemplairesCollection - nombreDresseurs;
 
 const cartesEnDoubleOuPlus = cartesCollection.filter(
   (carte) => (carte.quantite ?? 1) > 1
@@ -2162,31 +2137,7 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
   </div>
 
   {/* Catégories principales */}
-  <div className="mt-5 grid gap-5 sm:grid-cols-3">
-    <div className="group relative overflow-hidden rounded-3xl border border-cyan-300/25 bg-gradient-to-br from-slate-800 to-cyan-950/30 p-6 shadow-xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/60 hover:shadow-cyan-950/40">
-      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-cyan-300/10 blur-2xl" />
-
-      <div className="relative">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-bold uppercase tracking-wider text-slate-400">
-            Nombre d’énergies
-          </p>
-
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/15 text-2xl">
-            ⚪
-          </span>
-        </div>
-
-        <p className="mt-5 text-4xl font-black text-cyan-100">
-          {nombreEnergies}
-        </p>
-
-        <p className="mt-2 text-sm text-slate-400">
-          Carte{nombreEnergies > 1 ? "s" : ""} Énergie
-        </p>
-      </div>
-    </div>
-
+  <div className="mt-5 grid gap-5 sm:grid-cols-2">
     <div className="group relative overflow-hidden rounded-3xl border border-yellow-400/25 bg-gradient-to-br from-slate-800 to-amber-950/30 p-6 shadow-xl transition duration-300 hover:-translate-y-1 hover:border-yellow-300/60 hover:shadow-amber-950/40">
       <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-yellow-400/10 blur-2xl" />
 
@@ -3450,17 +3401,6 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
             🧑‍🏫 Mes Dresseurs
           </button>
 
-          <button
-            type="button"
-            onClick={() => setModeCollection("energies")}
-            className={`min-w-44 flex-1 rounded-xl px-3 py-3 text-sm font-bold transition sm:text-base ${
-              modeCollection === "energies"
-                ? "bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-950/40"
-                : "text-slate-300 hover:bg-slate-800 hover:text-cyan-300"
-            }`}
-          >
-            ⚪ Mes Énergies
-          </button>
 
           <button
             type="button"
@@ -3610,94 +3550,6 @@ const valeurCollection = cartesCollection.reduce((total, carte) => {
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
               {cartesDresseurs.map((carte) => {
-                const historiqueCarte = historiquePrix
-                  .filter(
-                    (ligne) => ligne.carte_id === carte.identifiant
-                  )
-                  .map((ligne) => ({
-                    prix: ligne.prix,
-                    date: new Date(
-                      ligne.date_releve
-                    ).toLocaleDateString("fr-FR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                    }),
-                  }));
-
-                return (
-                  <PokemonCard
-                    key={carte.identifiant}
-                    nom={carte.nom}
-                    edition={carte.edition}
-                    type={carte.type}
-                    etat={carte.etat}
-                    prix={carte.prix}
-                    quantite={carte.quantite}
-                    reverse={carte.reverse}
-                    image={carte.image}
-                    historique={historiqueCarte}
-                    selectionnee={cartesSelectionnees.includes(
-                      carte.identifiant
-                    )}
-                    onSelectionner={() =>
-                      selectionnerCarte(carte.identifiant)
-                    }
-                    onVoirGraphique={() =>
-                      ouvrirGraphiqueCarte(carte.identifiant)
-                    }
-                    onModifier={() =>
-                      modifierCarteDirectement(carte.identifiant)
-                    }
-                    onSupprimer={() =>
-                      supprimerUneCarte(carte.identifiant)
-                    }
-                    favori={favoris.includes(carte.identifiant)}
-                    onFavori={() =>
-                      basculerFavori(carte.identifiant)
-                    }
-                    onAgrandir={() =>
-                      setCarteAgrandie(carte)
-                    }
-                  />
-                );
-              })}
-            </div>
-          )}
-          </div>
-        </section>
-      )}
-
-      {modeCollection === "energies" && (
-        <section className="relative mt-10 overflow-hidden rounded-3xl border border-slate-300/30 bg-gradient-to-br from-slate-700/60 via-slate-950 to-cyan-950/30 p-4 shadow-2xl shadow-slate-950/40 sm:p-6">
-          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-200/10 blur-3xl" />
-          <div className="pointer-events-none absolute bottom-8 left-8 text-8xl opacity-5">⚪</div>
-          <div className="relative">
-          <div className="mb-7 mt-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-300">
-                Cartes Énergie
-              </p>
-
-              <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
-                ⚪ Mes Énergies
-              </h2>
-            </div>
-
-            <p className="text-slate-400">
-              {cartesEnergies.length} carte
-              {cartesEnergies.length > 1 ? "s" : ""}
-            </p>
-          </div>
-
-          {cartesEnergies.length === 0 ? (
-            <div className="rounded-2xl bg-slate-800 p-8 text-center">
-              <p className="text-xl text-gray-300">
-                Aucune carte Énergie trouvée. Pour classer une carte ici, choisis le type « Énergie » dans le formulaire.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {cartesEnergies.map((carte) => {
                 const historiqueCarte = historiquePrix
                   .filter(
                     (ligne) => ligne.carte_id === carte.identifiant

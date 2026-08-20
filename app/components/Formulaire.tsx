@@ -370,17 +370,12 @@ export default function Formulaire({
 
   const typePrincipal = type.startsWith("Dresseur")
     ? "Dresseur"
-    : type.startsWith("Énergie")
-      ? "Énergie"
-      : type;
+    : type;
 
   const sousTypeDresseur = type.startsWith("Dresseur - ")
     ? type.replace("Dresseur - ", "")
     : "";
 
-  const sousTypeEnergie = type.startsWith("Énergie ")
-    ? type.replace("Énergie ", "")
-    : "";
 
   const ajoutImpossible =
     selectionEnCours ||
@@ -540,7 +535,6 @@ export default function Formulaire({
           >
             <option value="">Choisir un type</option>
             <option value="Dresseur">🧑‍🏫 Dresseur</option>
-            <option value="Énergie">⚪ Énergie</option>
             <option value="Feu">🔥 Feu</option>
             <option value="Eau">💧 Eau</option>
             <option value="Plante">🌿 Plante</option>
@@ -581,35 +575,6 @@ export default function Formulaire({
               <option value="Objet">Objet</option>
               <option value="Outil Pokémon">Outil Pokémon</option>
               <option value="Stade">Stade</option>
-            </select>
-          </label>
-        )}
-
-        {typePrincipal === "Énergie" && (
-          <label className="block text-lg font-bold text-white">
-            ⚪ Sous-type Énergie
-            <select
-              value={sousTypeEnergie}
-              onChange={(e) =>
-                setType(
-                  e.target.value
-                    ? `Énergie ${e.target.value}`
-                    : "Énergie"
-                )
-              }
-              className={classeChamp}
-            >
-              <option value="">Énergie générale</option>
-              <option value="Feu">🔥 Feu</option>
-              <option value="Eau">💧 Eau</option>
-              <option value="Plante">🌿 Plante</option>
-              <option value="Électrique">⚡ Électrique</option>
-              <option value="Psy">🧠 Psy</option>
-              <option value="Combat">🥊 Combat</option>
-              <option value="Obscurité">🌑 Obscurité</option>
-              <option value="Métal">⚙️ Métal</option>
-              <option value="Fée">🧚 Fée</option>
-              <option value="Spéciale">✨ Spéciale</option>
             </select>
           </label>
         )}
